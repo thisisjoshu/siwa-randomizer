@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NAMES, pickRandomName } from "../lib/names";
 
-const ITEM_HEIGHT = 120; // px
+const ITEM_HEIGHT = 88; // px — sized for mobile-first
 const SPIN_DURATION_MS = 4200;
 
 export default function SlotPage() {
@@ -28,21 +28,20 @@ export default function SlotPage() {
     const next = pickRandomName(lastWinnerRef.current ?? undefined);
     lastWinnerRef.current = next;
 
-    // Reset to top with no transition.
+    // Reset to top with no transition (reel sits hidden behind the placeholder
+    // on the very first spin, so there's no flash of names).
     setTransition("none");
     setTranslate(0);
     setWinner(null);
     setSpinning(true);
-    setHasStarted(true);
 
-    // Find a target index near the end of the reel that matches the winner.
-    const targetCycle = 24; // land deep in the reel
+    const targetCycle = 24;
     const indexInNames = NAMES.indexOf(next);
     const targetIndex = targetCycle * NAMES.length + indexInNames;
 
-    // Next frame, apply the eased transition.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        setHasStarted(true); // remove the placeholder in the same frame the spin starts
         setTransition(
           `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
         );
@@ -56,61 +55,64 @@ export default function SlotPage() {
     }, SPIN_DURATION_MS + 80);
   };
 
+  const spinRef = useRef(spin);
+  spinRef.current = spin;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         e.preventDefault();
-        spin();
+        spinRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spinning]);
+  }, []);
 
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-darker via-brand-dark to-brand text-white">
+    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-darker via-brand-dark to-brand px-4 py-8 text-white sm:px-6">
       <BackLink />
 
-      <header className="mb-10 text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.5em] text-brand-light">
+      <header className="mb-6 text-center sm:mb-10">
+        <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-brand-light sm:text-xs">
           Solomon Water
         </p>
-        <h1 className="font-display mt-2 text-5xl font-black italic tracking-tight sm:text-6xl">
+        <h1 className="font-display mt-2 text-3xl font-black italic tracking-tight sm:text-5xl md:text-6xl">
           And the winner is…
         </h1>
       </header>
 
       <div
-        className="relative w-full max-w-3xl"
+        className="relative w-full max-w-2xl"
         style={{ height: ITEM_HEIGHT * 3 }}
       >
         {/* Reel window */}
-        <div
-          className="absolute inset-0 overflow-hidden rounded-3xl border-2 border-white/15 bg-black/30 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur"
-        >
-          {hasStarted ? (
-            <div
-              style={{
-                transform: `translateY(${translate + ITEM_HEIGHT}px)`,
-                transition,
-              }}
-            >
-              {reel.map((name, i) => (
-                <div
-                  key={i}
-                  style={{ height: ITEM_HEIGHT }}
-                  className="font-display flex items-center justify-center px-6 text-center text-5xl font-bold tracking-tight sm:text-6xl"
-                >
-                  {name}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="flex items-center gap-4 text-white/40">
-                <span className="text-5xl">💧</span>
-                <span className="text-xl font-semibold uppercase tracking-[0.4em]">
+        <div className="absolute inset-0 overflow-hidden rounded-2xl border-2 border-white/15 bg-black/30 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur sm:rounded-3xl">
+          {/* Reel — always mounted so the placeholder can hide it cleanly */}
+          <div
+            style={{
+              transform: `translateY(${translate + ITEM_HEIGHT}px)`,
+              transition,
+              visibility: hasStarted ? "visible" : "hidden",
+            }}
+          >
+            {reel.map((name, i) => (
+              <div
+                key={i}
+                style={{ height: ITEM_HEIGHT }}
+                className="font-display flex items-center justify-center px-4 text-center text-3xl font-bold tracking-tight sm:px-6 sm:text-4xl md:text-5xl"
+              >
+                {name}
+              </div>
+            ))}
+          </div>
+
+          {/* Placeholder — covers the reel until the first spin starts */}
+          {!hasStarted && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2 text-white/40 sm:flex-row sm:gap-4">
+                <span className="text-4xl sm:text-5xl">💧</span>
+                <span className="text-sm font-semibold uppercase tracking-[0.4em] sm:text-lg">
                   Ready to draw
                 </span>
               </div>
@@ -119,8 +121,14 @@ export default function SlotPage() {
         </div>
 
         {/* Top + bottom fades */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[120px] rounded-t-3xl bg-gradient-to-b from-brand-darker to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] rounded-b-3xl bg-gradient-to-t from-brand-darker to-transparent" />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 rounded-t-2xl bg-gradient-to-b from-brand-darker to-transparent sm:rounded-t-3xl"
+          style={{ height: ITEM_HEIGHT }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-brand-darker to-transparent sm:rounded-b-3xl"
+          style={{ height: ITEM_HEIGHT }}
+        />
 
         {/* Selection band */}
         <div
@@ -131,22 +139,22 @@ export default function SlotPage() {
         </div>
       </div>
 
-      <div className="mt-10 flex items-center gap-4">
+      <div className="mt-6 flex flex-col items-center gap-2 sm:mt-10 sm:flex-row sm:gap-4">
         <button
           onClick={spin}
           disabled={spinning}
-          className="rounded-full bg-white px-10 py-4 text-lg font-bold uppercase tracking-widest text-brand-darker shadow-lg transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-white px-8 py-3 text-base font-bold uppercase tracking-widest text-brand-darker shadow-lg transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:px-10 sm:py-4 sm:text-lg"
         >
           {spinning ? "Spinning…" : winner ? "Draw Again" : "Start"}
         </button>
-        <span className="text-xs uppercase tracking-widest text-white/60">
+        <span className="text-[10px] uppercase tracking-widest text-white/60 sm:text-xs">
           or press space
         </span>
       </div>
 
       {winner && !spinning && (
         <div
-          className="font-display mt-8 text-3xl font-bold italic tracking-tight text-brand-light"
+          className="font-display mt-6 px-4 text-center text-2xl font-bold italic tracking-tight text-brand-light sm:mt-8 sm:text-3xl"
           style={{ animation: "brand-glow 2s ease-in-out infinite" }}
         >
           🏆 {winner}
@@ -160,7 +168,7 @@ function BackLink() {
   return (
     <Link
       href="/"
-      className="absolute left-6 top-6 text-xs font-semibold uppercase tracking-widest text-white/60 hover:text-white"
+      className="absolute left-4 top-4 text-[10px] font-semibold uppercase tracking-widest text-white/60 hover:text-white sm:left-6 sm:top-6 sm:text-xs"
     >
       ← Back
     </Link>
