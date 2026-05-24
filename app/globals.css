@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5fbfe;
+  --foreground: #0b2030;
+
+  --brand: #218acc;
+  --brand-dark: #165d8a;
+  --brand-darker: #0b3a5a;
+  --brand-light: #56ade4;
+  --brand-cyan: #00a8e6;
+  --brand-ink: #0b2030;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-darker: var(--brand-darker);
+  --color-brand-light: var(--brand-light);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-ink: var(--brand-ink);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes brand-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes brand-glow {
+  0%, 100% { text-shadow: 0 0 24px rgba(33, 138, 204, 0.55), 0 0 60px rgba(0, 168, 230, 0.35); }
+  50% { text-shadow: 0 0 40px rgba(33, 138, 204, 0.95), 0 0 90px rgba(0, 168, 230, 0.6); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
