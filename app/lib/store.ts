@@ -34,15 +34,20 @@ export async function saveNames(names: string[]): Promise<string[]> {
 
 // Live-ish list of names for the spinner. Fetches on mount, whenever the tab
 // regains focus, and on a slow poll — so a Save in the admin shows up on the
-// display without a manual refresh, even on a separate device.
-export function useNames(): string[] {
+// display without a manual refresh, even on a separate device. `loaded` flips
+// true after the first fetch resolves, so the UI can tell "still loading" apart
+// from "genuinely empty" (and avoid flashing the empty state on every load).
+export function useNames(): { names: string[]; loaded: boolean } {
   const [names, setNames] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
     const sync = async () => {
       const next = await loadNames();
-      if (active) setNames(next);
+      if (!active) return;
+      setNames(next);
+      setLoaded(true);
     };
     sync();
 
@@ -59,5 +64,5 @@ export function useNames(): string[] {
     };
   }, []);
 
-  return names;
+  return { names, loaded };
 }

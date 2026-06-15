@@ -25,7 +25,7 @@ type Phase = "idle" | "spinning" | "stopping" | "revealed";
 const BRAND_CONFETTI_COLORS = ["#218acc", "#00a8e6", "#56ade4", "#ffffff"];
 
 export default function SlotPage() {
-  const names = useNames();
+  const { names, loaded } = useNames();
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [translate, setTranslate] = useState(0);
@@ -233,6 +233,11 @@ export default function SlotPage() {
           ? "Draw Again"
           : "Start";
 
+  // Three render states, distinguished so we never flash the empty CTA while
+  // the server list is still loading on first paint.
+  const isEmpty = loaded && names.length === 0;
+  const isReady = loaded && names.length > 0;
+
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-darker via-brand-dark to-brand px-4 py-10 text-white sm:px-6">
       {/* Ambient stage glow */}
@@ -263,11 +268,37 @@ export default function SlotPage() {
             Solomon Water
           </span>
         </div>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white/90 sm:text-5xl md:text-6xl">
-          And the winner is<span className="text-brand-cyan">…</span>
-        </h1>
+        {!isEmpty && (
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white/90 sm:text-5xl md:text-6xl">
+            And the winner is<span className="text-brand-cyan">…</span>
+          </h1>
+        )}
       </header>
 
+      {isEmpty ? (
+        /* Empty state — list loaded but no names entered yet */
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
+          <span
+            className="grid h-20 w-20 place-items-center rounded-3xl bg-brand-cyan/10 text-4xl ring-1 ring-brand-cyan/30 sm:h-24 sm:w-24 sm:text-5xl"
+            style={{ animation: "float-bob 3s ease-in-out infinite" }}
+          >
+            💧
+          </span>
+          <h2 className="font-display mt-6 text-4xl uppercase leading-none sm:text-5xl">
+            No names to draw yet
+          </h2>
+          <p className="mt-4 max-w-sm text-sm text-white/60 sm:text-base">
+            Add the entrants in the admin, then come back here to run the draw.
+          </p>
+          <Link
+            href="/admin"
+            className="mt-8 rounded-full bg-white px-10 py-4 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-105 sm:px-12 sm:py-5 sm:text-lg"
+          >
+            Add names →
+          </Link>
+        </div>
+      ) : (
+        <>
       {/* Stage */}
       <div
         className="relative z-10 w-full max-w-3xl"
@@ -304,16 +335,7 @@ export default function SlotPage() {
                   💧
                 </span>
                 <span className="eyebrow text-center text-xs sm:text-sm">
-                  {names.length === 0 ? (
-                    <>
-                      No names yet —{" "}
-                      <Link href="/admin" className="text-brand-light underline">
-                        add some
-                      </Link>
-                    </>
-                  ) : (
-                    "Ready to draw"
-                  )}
+                  {loaded ? "Ready to draw" : "Loading…"}
                 </span>
               </div>
             </div>
@@ -386,21 +408,25 @@ export default function SlotPage() {
       </div>
 
       {/* Controls */}
-      <div className="relative z-10 mt-8 flex flex-col items-center gap-3 sm:mt-12">
-        <button
-          onClick={handlePress}
-          disabled={phase === "stopping" || (phase === "idle" && names.length === 0)}
-          className="group relative rounded-full bg-white px-10 py-4 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-14 sm:py-5 sm:text-lg"
-        >
-          {buttonLabel}
-        </button>
-        <span className="eyebrow text-[10px] text-white/55 sm:text-xs">
-          or press{" "}
-          <kbd className="rounded border border-white/25 bg-white/5 px-1.5 py-0.5 font-sans text-[10px] not-italic tracking-normal">
-            Space
-          </kbd>
-        </span>
-      </div>
+      {isReady && (
+        <div className="relative z-10 mt-8 flex flex-col items-center gap-3 sm:mt-12">
+          <button
+            onClick={handlePress}
+            disabled={phase === "stopping"}
+            className="group relative rounded-full bg-white px-10 py-4 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-14 sm:py-5 sm:text-lg"
+          >
+            {buttonLabel}
+          </button>
+          <span className="eyebrow text-[10px] text-white/55 sm:text-xs">
+            or press{" "}
+            <kbd className="rounded border border-white/25 bg-white/5 px-1.5 py-0.5 font-sans text-[10px] not-italic tracking-normal">
+              Space
+            </kbd>
+          </span>
+        </div>
+      )}
+        </>
+      )}
     </div>
   );
 }
