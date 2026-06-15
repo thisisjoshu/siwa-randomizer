@@ -1,18 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
-import { NAMES, pickRandomName } from "./lib/names";
+import { pickRandomName } from "./lib/names";
+import { useNames } from "./lib/store";
 
-const ITEM_HEIGHT = 88; // px — sized for mobile-first
+const ITEM_HEIGHT = 104; // px — row height; sized for broadcast presence
 const SPIN_SPEED_PX_PER_MS = 2.4; // continuous-spin velocity
 const MIN_SPIN_MS = 1500; // ignore Stop presses before this many ms
-// Continuous deceleration: starts at full spin speed, decays smoothly to 0 at
-// the winner. STOP_DECAY_POWER controls how dramatic the tail crawl is —
-// higher = longer slow-mo at the end. Total stop duration is derived so the
-// motion is C0/C1 continuous with the spin (no visible pause).
-const STOP_EXTRA_CYCLES = 3;
-const STOP_DECAY_POWER = 2.5;
+// The slow-down always lasts exactly STOP_DURATION_MS, regardless of how many
+// names are in the list. Deceleration starts at full spin speed and decays
+// smoothly to 0 at the winner; rather than fixing the decay power, we derive it
+// from the travel distance so the motion stays C0/C1 continuous with the spin
+// (no jerk) AND the winner lands exactly on time — see stopSpinning.
+const STOP_DURATION_MS = 7000; // fixed 10s glide to the winner
+// Distance we'd ideally cover during the slow-down, chosen so the derived decay
+// power lands around this value (a nicely back-loaded "will it land?" crawl).
+const STOP_IDEAL_DECAY_POWER = 2.5;
 const PRE_LOCK_FLASH_MS = 280; // band flash right before lock
 
 type Phase = "idle" | "spinning" | "stopping" | "revealed";
@@ -20,6 +25,7 @@ type Phase = "idle" | "spinning" | "stopping" | "revealed";
 const BRAND_CONFETTI_COLORS = ["#218acc", "#00a8e6", "#56ade4", "#ffffff"];
 
 export default function SlotPage() {
+  const names = useNames();
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [translate, setTranslate] = useState(0);
@@ -35,11 +41,11 @@ export default function SlotPage() {
   const reel = useMemo(() => {
     const cycles = 60;
     const out: string[] = [];
-    for (let i = 0; i < cycles; i++) out.push(...NAMES);
+    for (let i = 0; i < cycles; i++) out.push(...names);
     return out;
-  }, []);
+  }, [names]);
 
-  const reelHeight = NAMES.length * ITEM_HEIGHT;
+  const reelHeight = names.length * ITEM_HEIGHT;
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -88,7 +94,9 @@ export default function SlotPage() {
   }, []);
 
   const startSpinning = useCallback(() => {
-    const next = pickRandomName(lastWinnerRef.current ?? undefined);
+    if (names.length === 0) return;
+    const next = pickRandomName(names, lastWinnerRef.current ?? undefined);
+    if (!next) return;
     lastWinnerRef.current = next;
 
     setWinner(null);
@@ -110,7 +118,7 @@ export default function SlotPage() {
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [reelHeight, updateTranslate]);
+  }, [names, reelHeight, updateTranslate]);
 
   const stopSpinning = useCallback(() => {
     const elapsed = performance.now() - spinStartRef.current;
@@ -123,26 +131,37 @@ export default function SlotPage() {
 
     // Current translate is in (-reelHeight, 0]. Land the winner at the same
     // visual band position after STOP_EXTRA_CYCLES additional cycles.
-    const winnerIndex = NAMES.indexOf(winnerName);
+    const winnerIndex = names.indexOf(winnerName);
     const current = translateRef.current;
     // Distance to next aligned winner position (continuing downward / more
     // negative). winnerIndex * ITEM_HEIGHT is how far below the cycle origin
     // the winner sits.
     const winnerOffset = winnerIndex * ITEM_HEIGHT;
-    // Target is current minus (extra cycles * reelHeight) and aligned to land
-    // on the winner row. We solve: target ≡ -winnerOffset (mod reelHeight),
-    // and target <= current - STOP_EXTRA_CYCLES * reelHeight.
-    const minTarget = current - STOP_EXTRA_CYCLES * reelHeight;
-    // Bring -winnerOffset into the same modular class <= minTarget.
-    const mod = ((minTarget + winnerOffset) % reelHeight + reelHeight) % reelHeight;
-    const target = minTarget - mod;
+    const v0 = SPIN_SPEED_PX_PER_MS;
+    const duration = STOP_DURATION_MS; // fixed glide, independent of list size
 
-    const totalDistance = current - target; // positive (we travel downward)
-    const v0 = SPIN_SPEED_PX_PER_MS; // continuity: matches spin velocity exactly
-    const n = STOP_DECAY_POWER;
-    // Quadratic-ish velocity decay: v(t) = v0 * (1 - t/T)^n
-    // Integrated distance = v0 * T / (n + 1) → solve T for our distance.
-    const duration = ((n + 1) * totalDistance) / v0;
+    // Valid landing distances (that drop the winner in the band) are
+    // d0 + k*reelHeight for integer k >= 0, where d0 is the smallest such.
+    const d0 = (((current + winnerOffset) % reelHeight) + reelHeight) % reelHeight;
+    // Aim for a travel distance that makes the derived decay power land near
+    // STOP_IDEAL_DECAY_POWER, then snap to a whole number of winner-aligned
+    // cycles (k >= 1 so there's always at least one full visible pass).
+    const idealDistance = (v0 * duration) / (STOP_IDEAL_DECAY_POWER + 1);
+    let k = Math.max(1, Math.round((idealDistance - d0) / reelHeight));
+    let totalDistance = d0 + k * reelHeight;
+    // The curve can cover at most v0*duration in this time; back off cycles if
+    // we'd exceed that (would otherwise need a non-physical decay power).
+    while (totalDistance >= v0 * duration && k > 0) {
+      k -= 1;
+      totalDistance = d0 + k * reelHeight;
+    }
+    const target = current - totalDistance;
+
+    // Derive the decay power so v(0) exactly equals the spin speed (no jerk) and
+    // the winner lands precisely at t = duration:
+    //   v(t) = v0 * (1 - t/T)^n,  integral over [0,T] = v0*T/(n+1) = totalDistance
+    //   ⇒ n + 1 = v0*T / totalDistance.
+    const n = (v0 * duration) / totalDistance - 1;
 
     phaseRef.current = "stopping";
     setPhase("stopping");
@@ -174,7 +193,7 @@ export default function SlotPage() {
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [fireConfetti, reelHeight, updateTranslate]);
+  }, [names, fireConfetti, reelHeight, updateTranslate]);
 
   const handlePress = useCallback(() => {
     const current = phaseRef.current;
@@ -215,22 +234,47 @@ export default function SlotPage() {
           : "Start";
 
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-darker via-brand-dark to-brand px-4 py-8 text-white sm:px-6">
-      <header className="mb-6 text-center sm:mb-10">
-        <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-brand-light sm:text-xs">
-          Solomon Water
-        </p>
-        <h1 className="font-display mt-2 text-3xl font-black italic tracking-tight sm:text-5xl md:text-6xl">
-          And the winner is…
+    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-darker via-brand-dark to-brand px-4 py-10 text-white sm:px-6">
+      {/* Ambient stage glow */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin]"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(0,168,230,0.35), rgba(86,173,228,0.12) 45%, transparent 70%)",
+          animation: "aurora 18s linear infinite",
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(11,32,48,0.7))]" />
+
+      <Link
+        href="/admin"
+        className="eyebrow absolute right-4 top-4 z-20 text-[10px] text-white/45 transition hover:text-brand-light sm:right-6 sm:top-6 sm:text-xs"
+      >
+        Admin →
+      </Link>
+
+      {/* Brand lockup + headline */}
+      <header className="relative z-10 mb-8 flex flex-col items-center text-center sm:mb-12">
+        <div className="flex items-center gap-3">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-cyan/15 text-base ring-1 ring-brand-cyan/40 sm:h-9 sm:w-9">
+            💧
+          </span>
+          <span className="eyebrow text-[11px] text-brand-light sm:text-sm">
+            Solomon Water
+          </span>
+        </div>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white/90 sm:text-5xl md:text-6xl">
+          And the winner is<span className="text-brand-cyan">…</span>
         </h1>
       </header>
 
+      {/* Stage */}
       <div
-        className="relative w-full max-w-2xl"
+        className="relative z-10 w-full max-w-3xl"
         style={{ height: ITEM_HEIGHT * 3 }}
       >
         {/* Reel window */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl border-2 border-white/15 bg-black/30 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur sm:rounded-3xl">
+        <div className="absolute inset-0 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-black/40 to-black/25 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur">
           <div
             style={{
               transform: `translateY(${translate + ITEM_HEIGHT}px)`,
@@ -243,7 +287,7 @@ export default function SlotPage() {
               <div
                 key={i}
                 style={{ height: ITEM_HEIGHT }}
-                className="font-display flex items-center justify-center px-4 text-center text-3xl font-bold tracking-tight sm:px-6 sm:text-4xl md:text-5xl"
+                className="font-display flex items-center justify-center whitespace-nowrap px-6 text-center text-4xl uppercase leading-none sm:px-10 sm:text-5xl md:text-6xl"
               >
                 {name}
               </div>
@@ -252,10 +296,24 @@ export default function SlotPage() {
 
           {!hasStarted && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2 text-white/40 sm:flex-row sm:gap-4">
-                <span className="text-4xl sm:text-5xl">💧</span>
-                <span className="text-sm font-semibold uppercase tracking-[0.4em] sm:text-lg">
-                  Ready to draw
+              <div className="flex flex-col items-center gap-3 text-white/45">
+                <span
+                  className="text-5xl sm:text-6xl"
+                  style={{ animation: "float-bob 3s ease-in-out infinite" }}
+                >
+                  💧
+                </span>
+                <span className="eyebrow text-center text-xs sm:text-sm">
+                  {names.length === 0 ? (
+                    <>
+                      No names yet —{" "}
+                      <Link href="/admin" className="text-brand-light underline">
+                        add some
+                      </Link>
+                    </>
+                  ) : (
+                    "Ready to draw"
+                  )}
                 </span>
               </div>
             </div>
@@ -264,18 +322,22 @@ export default function SlotPage() {
 
         {/* Top + bottom fades */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 rounded-t-2xl bg-gradient-to-b from-brand-darker to-transparent sm:rounded-t-3xl"
+          className="pointer-events-none absolute inset-x-0 top-0 rounded-t-3xl bg-gradient-to-b from-brand-darker via-brand-darker/80 to-transparent"
           style={{ height: ITEM_HEIGHT }}
         />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-brand-darker to-transparent sm:rounded-b-3xl"
+          className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-3xl bg-gradient-to-t from-brand-darker via-brand-darker/80 to-transparent"
           style={{ height: ITEM_HEIGHT }}
         />
 
         {/* Selection band */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-y-2 border-brand-cyan/80"
-          style={{ height: ITEM_HEIGHT }}
+          className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-y-2 border-brand-cyan/70"
+          style={{
+            height: ITEM_HEIGHT,
+            boxShadow:
+              "0 0 30px rgba(0,168,230,0.35), inset 0 0 30px rgba(0,168,230,0.12)",
+          }}
         >
           <div
             className={`absolute inset-0 transition-colors duration-500 ${
@@ -284,41 +346,59 @@ export default function SlotPage() {
           />
         </div>
 
+        {/* Caret indicators pointing at the band */}
+        <span
+          className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-2xl text-brand-cyan drop-shadow-[0_0_8px_rgba(0,168,230,0.8)] sm:text-3xl"
+          style={{ ["--caret-shift" as string]: "6px", animation: "caret-pulse 1.4s ease-in-out infinite" }}
+        >
+          ▶
+        </span>
+        <span
+          className="pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-1/2 text-2xl text-brand-cyan drop-shadow-[0_0_8px_rgba(0,168,230,0.8)] sm:text-3xl"
+          style={{ ["--caret-shift" as string]: "-6px", animation: "caret-pulse 1.4s ease-in-out infinite" }}
+        >
+          ◀
+        </span>
+
         {/* Winner overlay card */}
         {phase === "revealed" && winner && (
           <div
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
             style={{ animation: "winner-pop 600ms cubic-bezier(0.2, 1.4, 0.4, 1) both" }}
           >
-            <div className="relative mx-4 w-full max-w-xl rounded-2xl border-2 border-brand-cyan bg-brand-darker/95 px-6 py-6 text-center shadow-[0_20px_80px_-10px_rgba(0,168,230,0.6)] sm:rounded-3xl sm:px-10 sm:py-8">
+            <div className="relative mx-2 w-full max-w-2xl rounded-3xl border-2 border-brand-cyan bg-brand-darker/95 px-6 py-7 text-center shadow-[0_30px_100px_-15px_rgba(0,168,230,0.65)] sm:px-12 sm:py-10">
               <div
-                className="pointer-events-none absolute -inset-1 rounded-2xl sm:rounded-3xl"
+                className="pointer-events-none absolute -inset-1 rounded-3xl"
                 style={{
-                  boxShadow: "0 0 60px 6px rgba(0, 168, 230, 0.55)",
+                  boxShadow: "0 0 70px 8px rgba(0, 168, 230, 0.55)",
                   animation: "brand-glow 2s ease-in-out infinite",
                 }}
               />
-              <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-brand-light sm:text-xs">
-                Solomon Water · Customer Draw
+              <p className="eyebrow text-[11px] text-brand-light sm:text-xs">
+                🏆 Winner · Customer Draw
               </p>
-              <p className="font-display mt-3 text-3xl font-black italic tracking-tight text-white sm:text-5xl md:text-6xl">
-                🏆 {winner}
+              <p className="font-display mt-3 break-words text-5xl uppercase leading-[0.9] text-white sm:text-7xl md:text-8xl">
+                {winner}
               </p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-6 flex flex-col items-center gap-2 sm:mt-10 sm:flex-row sm:gap-4">
+      {/* Controls */}
+      <div className="relative z-10 mt-8 flex flex-col items-center gap-3 sm:mt-12">
         <button
           onClick={handlePress}
-          disabled={phase === "stopping"}
-          className="rounded-full bg-white px-8 py-3 text-base font-bold uppercase tracking-widest text-brand-darker shadow-lg transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:px-10 sm:py-4 sm:text-lg"
+          disabled={phase === "stopping" || (phase === "idle" && names.length === 0)}
+          className="group relative rounded-full bg-white px-10 py-4 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-14 sm:py-5 sm:text-lg"
         >
           {buttonLabel}
         </button>
-        <span className="text-[10px] uppercase tracking-widest text-white/60 sm:text-xs">
-          or press space
+        <span className="eyebrow text-[10px] text-white/55 sm:text-xs">
+          or press{" "}
+          <kbd className="rounded border border-white/25 bg-white/5 px-1.5 py-0.5 font-sans text-[10px] not-italic tracking-normal">
+            Space
+          </kbd>
         </span>
       </div>
     </div>

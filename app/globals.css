@@ -32,6 +32,20 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Anton is a caps-first condensed display face; nudge tracking + line-height so
+   big headings sit tight and read as one confident block. */
+.font-display {
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+}
+
+/* Eyebrow / label treatment used across both pages. */
+.eyebrow {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+}
+
 @keyframes brand-pulse {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.04); }
@@ -51,4 +65,23 @@ body {
   0% { opacity: 0; transform: scale(0.5); }
   60% { opacity: 1; transform: scale(1.08); }
   100% { opacity: 1; transform: scale(1); }
+}
+
+/* Slow rotating glow behind the stage for depth (brand-cyan, low opacity). */
+@keyframes aurora {
+  0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.15); opacity: 0.75; }
+  100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); opacity: 0.5; }
+}
+
+/* Gentle bob for the idle water-drop prompt. */
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Caret indicators that point at the selection band. */
+@keyframes caret-pulse {
+  0%, 100% { opacity: 0.5; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(var(--caret-shift, 0)); }
 }
