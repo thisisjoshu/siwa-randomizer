@@ -9,7 +9,7 @@ import { useNames } from "../lib/store";
 // so exactly three rows fill the framed window (matching the mockup), then the
 // frame's fixed aspect ratio derives the overall card dimensions.
 const ITEM_HEIGHT = 150; // px — one name row; tuned for broadcast presence
-const SPIN_SPEED_PX_PER_MS = 1.2; // ≈7 rows/sec at full spin
+const SPIN_SPEED_PX_PER_MS = 1.6; // ≈7 rows/sec at full spin
 const MIN_SPIN_MS = 1500; // ignore Stop presses before this
 // Deceleration shape. The slowdown follows v(t) = v0·(1 − t/T)^POWER:
 //   • 1   = constant deceleration (most even, linear-velocity glide)
@@ -19,7 +19,7 @@ const SLOWDOWN_POWER = 1.5;
 // distance whose curve begins at the spin speed over this duration (seamless
 // hand-off) and place the winner on whichever row lands centred — so the
 // distance, and therefore the 7s duration and feel, never depend on list size.
-const SLOWDOWN_DURATION_MS = 7000;
+const SLOWDOWN_DURATION_MS = 9000;
 // The confetti clip opens with ~0.47s of black lead-in frames; park playback at
 // the burst so revealing it starts the confetti instantly (and we skip the
 // invisible lead-in entirely).
