@@ -24,6 +24,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
+  --font-names: var(--font-names);
 }
 
 body {
@@ -32,11 +33,18 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Anton is a caps-first condensed display face; nudge tracking + line-height so
-   big headings sit tight and read as one confident block. */
+/* Newake is a heavy, chunky display face for the "WIN BIG" payoff; nudge
+   tracking + line-height so big headings sit tight as one confident block. */
 .font-display {
   letter-spacing: 0.01em;
   line-height: 0.95;
+}
+
+/* Bebas Neue Pro drives the names reel — tall and narrow. A touch of tracking
+   keeps the all-caps names from feeling cramped while spinning. */
+.font-names {
+  font-family: var(--font-names), var(--font-sans), sans-serif;
+  letter-spacing: 0.03em;
 }
 
 /* Eyebrow / label treatment used across both pages. */

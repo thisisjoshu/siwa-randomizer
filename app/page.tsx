@@ -318,7 +318,7 @@ export default function SlotPage() {
               <div
                 key={i}
                 style={{ height: ITEM_HEIGHT }}
-                className="font-display flex items-center justify-center whitespace-nowrap px-6 text-center text-4xl uppercase leading-none sm:px-10 sm:text-5xl md:text-6xl"
+                className="font-names flex items-center justify-center whitespace-nowrap px-6 text-center text-4xl uppercase leading-none sm:px-10 sm:text-5xl md:text-6xl"
               >
                 {name}
               </div>
