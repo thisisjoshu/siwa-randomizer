@@ -9,10 +9,17 @@ import { useNames } from "../lib/store";
 // so exactly three rows fill the framed window (matching the mockup), then the
 // frame's fixed aspect ratio derives the overall card dimensions.
 const ITEM_HEIGHT = 150; // px — one name row; tuned for broadcast presence
-const SPIN_SPEED_PX_PER_MS = 2.4;
-const MIN_SPIN_MS = 1500;
-const STOP_DURATION_MS = 7000;
-const STOP_IDEAL_DECAY_POWER = 2.5;
+const SPIN_SPEED_PX_PER_MS = 1.2; // ≈7 rows/sec at full spin
+const MIN_SPIN_MS = 1500; // ignore Stop presses before this
+// Deceleration shape. The slowdown follows v(t) = v0·(1 − t/T)^POWER:
+//   • 1   = constant deceleration (most even, linear-velocity glide)
+//   • 1.5 = a touch back-loaded — eases a little longer near the end
+const SLOWDOWN_POWER = 1.5;
+// Fixed slow-down length for EVERY list size. We always travel the exact
+// distance whose curve begins at the spin speed over this duration (seamless
+// hand-off) and place the winner on whichever row lands centred — so the
+// distance, and therefore the 7s duration and feel, never depend on list size.
+const SLOWDOWN_DURATION_MS = 7000;
 // The confetti clip opens with ~0.47s of black lead-in frames; park playback at
 // the burst so revealing it starts the confetti instantly (and we skip the
 // invisible lead-in entirely).
@@ -34,20 +41,31 @@ export default function Spinner2Page() {
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);
+  // Row index in the reel that the slow-down lands on; we paint the winner there
+  // so the travel distance can stay constant (independent of the list).
+  const [landingIndex, setLandingIndex] = useState<number | null>(null);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
-  // Start one row in so the idle reel shows three names (one above the centre,
-  // not an empty slot at index 0).
-  const [translate, setTranslate] = useState(-ITEM_HEIGHT);
+  const reelInnerRef = useRef<HTMLDivElement>(null);
   const lastWinnerRef = useRef<string | null>(null);
   const rafRef = useRef<number | null>(null);
   const spinStartRef = useRef<number>(0);
+  // Start one row in so the idle reel shows three names (one above the centre,
+  // not an empty slot at index 0). Driven imperatively (no per-frame React
+  // re-render) so the slow-down stays smooth — see updateTranslate.
   const translateRef = useRef(-ITEM_HEIGHT);
   const phaseRef = useRef<Phase>("idle");
 
-  // Long reel so the spin has runway.
+  // Repeat the names just enough to cover the longest possible slow-down travel
+  // plus runway — keeps the DOM small (re-rendering thousands of rows is what
+  // made the stop stutter).
   const reel = useMemo(() => {
+    if (names.length === 0) return [];
+    const reelH = names.length * ITEM_HEIGHT;
+    const maxTravel =
+      (SPIN_SPEED_PX_PER_MS * SLOWDOWN_DURATION_MS) / (SLOWDOWN_POWER + 1);
+    const cycles = Math.ceil(maxTravel / reelH) + 8;
     const out: string[] = [];
-    for (let i = 0; i < 60; i++) out.push(...names);
+    for (let i = 0; i < cycles; i++) out.push(...names);
     return out;
   }, [names]);
 
@@ -64,9 +82,13 @@ export default function Spinner2Page() {
     }
   };
 
+  // Write the transform straight to the DOM node instead of through React
+  // state, so spinning/decelerating doesn't re-render (and re-reconcile every
+  // reel row) on every frame. The +ITEM_HEIGHT keeps the focus band centred.
   const updateTranslate = useCallback((value: number) => {
     translateRef.current = value;
-    setTranslate(value);
+    const el = reelInnerRef.current;
+    if (el) el.style.transform = `translateY(${value + ITEM_HEIGHT}px)`;
   }, []);
 
   // Park the (paused, hidden) confetti clip on its first burst frame, skipping
@@ -95,6 +117,7 @@ export default function Spinner2Page() {
 
     setWinner(null);
     setShowConfetti(false);
+    setLandingIndex(null);
     updateTranslate(0);
     spinStartRef.current = performance.now();
     phaseRef.current = "spinning";
@@ -121,22 +144,28 @@ export default function Spinner2Page() {
     const winnerName = lastWinnerRef.current;
     if (!winnerName) return;
 
-    const winnerIndex = names.indexOf(winnerName);
     const current = translateRef.current;
-    const winnerOffset = winnerIndex * ITEM_HEIGHT;
     const v0 = SPIN_SPEED_PX_PER_MS;
-    const duration = STOP_DURATION_MS;
+    const power = SLOWDOWN_POWER;
+    const duration = SLOWDOWN_DURATION_MS;
 
-    const d0 = (((current + winnerOffset) % reelHeight) + reelHeight) % reelHeight;
-    const idealDistance = (v0 * duration) / (STOP_IDEAL_DECAY_POWER + 1);
-    let k = Math.max(1, Math.round((idealDistance - d0) / reelHeight));
-    let totalDistance = d0 + k * reelHeight;
-    while (totalDistance >= v0 * duration && k > 0) {
-      k -= 1;
-      totalDistance = d0 + k * reelHeight;
-    }
+    // Distance whose curve begins at exactly the spin speed over this fixed
+    // duration — a seamless hand-off: ∫₀ᵀ v0·(1−t/T)^power dt = v0·T/(power+1).
+    const idealDistance = (v0 * duration) / (power + 1);
+    // Nudge the distance (by < half a row) so the landing lands exactly on a row
+    // boundary, i.e. the winner ends up dead-centre. This keeps the distance
+    // essentially constant — and so the duration and feel — for any list size.
+    const remCurrent = ((current % ITEM_HEIGHT) + ITEM_HEIGHT) % ITEM_HEIGHT;
+    const remIdeal = ((idealDistance % ITEM_HEIGHT) + ITEM_HEIGHT) % ITEM_HEIGHT;
+    let adjust = remCurrent - remIdeal;
+    if (adjust > ITEM_HEIGHT / 2) adjust -= ITEM_HEIGHT;
+    if (adjust < -ITEM_HEIGHT / 2) adjust += ITEM_HEIGHT;
+    const totalDistance = idealDistance + adjust;
     const target = current - totalDistance;
-    const n = (v0 * duration) / totalDistance - 1;
+
+    // Paint the winner on the row that ends up centred (target is a whole number
+    // of rows up, so −target/ITEM_HEIGHT is an integer index).
+    setLandingIndex(Math.round(-target / ITEM_HEIGHT));
 
     phaseRef.current = "stopping";
     setPhase("stopping");
@@ -158,12 +187,12 @@ export default function Spinner2Page() {
         return;
       }
       const p = t / duration;
-      const traveled = totalDistance * (1 - Math.pow(1 - p, n + 1));
+      const traveled = totalDistance * (1 - Math.pow(1 - p, power + 1));
       updateTranslate(current - traveled);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [names, armConfetti, revealConfetti, reelHeight, updateTranslate]);
+  }, [armConfetti, revealConfetti, updateTranslate]);
 
   const handlePress = useCallback(() => {
     const current = phaseRef.current;
@@ -285,11 +314,14 @@ export default function Spinner2Page() {
               {/* Names — the middle row sits in the focus band; one extra row
                   above keeps the band centered (offset by +ITEM_HEIGHT). */}
               <div
+                ref={reelInnerRef}
                 style={{
-                  transform: `translateY(${translate + ITEM_HEIGHT}px)`,
-                  // Transform is driven frame-by-frame (no CSS transition); only
-                  // opacity animates, so the reel fades out on reveal leaving the
-                  // standalone winner label below.
+                  // Transform is written imperatively each frame (see
+                  // updateTranslate); this initial value is re-read from the ref
+                  // on the occasional React re-render, so it stays in sync.
+                  transform: `translateY(${translateRef.current + ITEM_HEIGHT}px)`,
+                  // Only opacity animates via CSS, so the reel fades out on
+                  // reveal leaving the standalone winner label below.
                   transition: "opacity 450ms ease",
                   opacity: phase === "revealed" ? 0 : 1,
                   willChange: "transform",
@@ -310,7 +342,9 @@ export default function Spinner2Page() {
                     }}
                     className="font-names flex items-center justify-center whitespace-nowrap px-6 text-center text-6xl uppercase leading-none text-white sm:text-7xl md:text-8xl"
                   >
-                    {name}
+                    {/* Paint the winner on the landing row so the stop always
+                        settles on it, whatever the travel distance was. */}
+                    {i === landingIndex ? lastWinnerRef.current ?? name : name}
                   </div>
                 ))}
               </div>
