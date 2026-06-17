@@ -6,6 +6,13 @@ import { useEffect, useState } from "react";
 // never touches the file directly — it just reads/writes through the route.
 const ENDPOINT = "/api/names";
 
+function sameNames(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 // How often the spinner re-checks the server for changes saved in the admin
 // (in addition to refetching whenever the window regains focus).
 const POLL_MS = 10000;
@@ -46,7 +53,10 @@ export function useNames(): { names: string[]; loaded: boolean } {
     const sync = async () => {
       const next = await loadNames();
       if (!active) return;
-      setNames(next);
+      // Keep the SAME array reference when nothing changed, so a no-op poll
+      // doesn't re-render consumers (which would rebuild the spinner reel and
+      // hitch mid-spin). React bails out when state identity is unchanged.
+      setNames((prev) => (sameNames(prev, next) ? prev : next));
       setLoaded(true);
     };
     sync();
