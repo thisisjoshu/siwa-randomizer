@@ -412,7 +412,7 @@ export default function Spinner2Page() {
                   WebkitTextStroke: "0.03em currentColor",
                   paintOrder: "stroke fill",
                 }}
-                className="font-names rounded-full bg-white px-12 py-1.5 text-2xl uppercase leading-none tracking-[0.3em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl"
+                className="font-names cursor-pointer rounded-full bg-white px-12 py-1.5 text-2xl uppercase leading-none tracking-[0.3em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl"
               >
                 {buttonLabel}
               </button>
