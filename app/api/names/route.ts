@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { cleanNames } from "../../lib/names";
 
 // Needs the Node runtime and must never be statically cached — the list changes
@@ -9,10 +9,19 @@ import { cleanNames } from "../../lib/names";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Vercel's filesystem is read-only (only /tmp, which is ephemeral), so on Vercel
-// we persist to Vercel KV. Locally — where no KV store is configured — we fall
-// back to a JSON file so `npm run dev` keeps working with no external setup.
-const USE_KV = Boolean(process.env.KV_REST_API_URL);
+// Vercel's filesystem is read-only (only /tmp, which is ephemeral), so in
+// production we persist to Upstash Redis. Locally — where no Redis store is
+// configured — we fall back to a JSON file so `npm run dev` works with no
+// external setup. Accept either the Upstash-native env vars or the KV_*-prefixed
+// ones the Vercel Marketplace integration injects.
+const REDIS_URL =
+  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+const redis =
+  REDIS_URL && REDIS_TOKEN
+    ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN })
+    : null;
 const KV_KEY = "siwa:names";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -24,9 +33,9 @@ function toNameArray(value: unknown): string[] {
 }
 
 async function readNames(): Promise<string[]> {
-  if (USE_KV) {
-    // @vercel/kv stores/returns JSON, so this comes back as an array already.
-    const value = await kv.get<unknown>(KV_KEY);
+  if (redis) {
+    // @upstash/redis auto-deserializes JSON, so this comes back as an array.
+    const value = await redis.get<unknown>(KV_KEY);
     return toNameArray(value);
   }
   try {
@@ -40,8 +49,8 @@ async function readNames(): Promise<string[]> {
 
 async function writeNames(names: string[]): Promise<string[]> {
   const cleaned = cleanNames(names);
-  if (USE_KV) {
-    await kv.set(KV_KEY, cleaned);
+  if (redis) {
+    await redis.set(KV_KEY, cleaned);
     return cleaned;
   }
   await fs.mkdir(DATA_DIR, { recursive: true });
