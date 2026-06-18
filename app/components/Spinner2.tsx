@@ -44,6 +44,7 @@ export default function Spinner2Page() {
   // Row index in the reel that the slow-down lands on; we paint the winner there
   // so the travel distance can stay constant (independent of the list).
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
+  const [cardScale, setCardScale] = useState(1);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
   const reelInnerRef = useRef<HTMLDivElement>(null);
   const lastWinnerRef = useRef<string | null>(null);
@@ -74,6 +75,22 @@ export default function Spinner2Page() {
   // Card height = three rows of window, scaled back up by the frame inset.
   const cardHeight = (ITEM_HEIGHT * 3) / WINDOW_VISIBLE_FRACTION;
   const cardWidth = cardHeight * FRAME_RATIO;
+
+  // Scale the whole card down to fit the viewport (preserving aspect) rather
+  // than squashing its width — keeps the frame proportional on mobile.
+  useEffect(() => {
+    const fit = () => {
+      const s = Math.min(
+        1,
+        (window.innerWidth - 24) / cardWidth,
+        (window.innerHeight - 200) / cardHeight,
+      );
+      setCardScale(s > 0 ? s : 1);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [cardWidth, cardHeight]);
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -287,12 +304,19 @@ export default function Spinner2Page() {
         </div>
       ) : (
         <>
-          {/* Card stage */}
+          {/* Card stage — scaled (not squashed) to fit the viewport. The outer
+              box reserves the scaled footprint so the button sits right below. */}
           <div
-            className="relative z-10 w-full max-w-[92vw]"
+            className="relative z-10"
+            style={{ width: cardWidth * cardScale, height: cardHeight * cardScale }}
+          >
+          <div
+            className="relative"
             style={{
               width: cardWidth,
               height: cardHeight,
+              transform: `scale(${cardScale})`,
+              transformOrigin: "top left",
             }}
           >
             {/* Reel window — blue fill + scrolling names, clipped to the card
@@ -400,10 +424,11 @@ export default function Spinner2Page() {
               className="pointer-events-none absolute inset-0 h-full w-full"
             />
           </div>
+          </div>
 
           {/* Draw button */}
           {isReady && (
-            <div className="relative z-10 mt-8 flex flex-col items-center gap-6 sm:mt-10 sm:gap-7">
+            <div className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7">
               <button
                 onClick={handlePress}
                 disabled={phase === "stopping"}
@@ -413,11 +438,12 @@ export default function Spinner2Page() {
                   WebkitTextStroke: "0.03em currentColor",
                   paintOrder: "stroke fill",
                 }}
-                className="font-names cursor-pointer rounded-full bg-white px-12 py-1.5 text-2xl uppercase leading-none tracking-[0.3em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl"
+                className="font-names cursor-pointer rounded-full bg-white px-10 py-1.5 text-xl uppercase leading-none tracking-[0.25em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl sm:tracking-[0.3em]"
               >
                 {buttonLabel}
               </button>
-              <span className="text-[10px] font-normal tracking-wide text-white/55 sm:text-[11px]">
+              {/* Keyboard hint is irrelevant on touch — show on sm+ only. */}
+              <span className="hidden text-[11px] font-normal tracking-wide text-white/55 sm:block">
                 or press{" "}
                 <kbd className="rounded border border-white/25 bg-white/10 px-1.5 py-0.5 font-sans text-[10px] not-italic">
                   Space

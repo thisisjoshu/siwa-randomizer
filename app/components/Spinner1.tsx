@@ -64,6 +64,7 @@ export default function Spinner1Page() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
+  const [contentScale, setContentScale] = useState(1);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
   const reelInnerRef = useRef<HTMLDivElement>(null);
   const lastWinnerRef = useRef<string | null>(null);
@@ -89,6 +90,31 @@ export default function Spinner1Page() {
   // inside the frame). The splash + leaves overflow around this box.
   const cardHeight = (ITEM_HEIGHT * 3) / WINDOW_VISIBLE_FRACTION;
   const cardWidth = cardHeight * CARD_ASPECT;
+
+  // Natural size of the whole content group (headline + card + button), derived
+  // from the layout constants: headline block (0.55×) minus its negative bottom
+  // gap (0.09×), the card (1×), plus the button block (~90px on mobile).
+  // Natural height of the SCALED part (headline + card). The button renders
+  // full-size below and isn't scaled, so it's excluded here and reserved
+  // separately via BUTTON_BLOCK in the fit calc.
+  const cardGroupHeight = cardHeight * (1 + 0.55 + HEADLINE_BOTTOM_GAP_FRAC);
+  const BUTTON_BLOCK = 90; // approx full-size button + gap (unscaled)
+
+  // Scale the headline + card down to fit the viewport (preserving aspect)
+  // instead of letting the frame/splash run off the edges on mobile.
+  useEffect(() => {
+    const fit = () => {
+      const s = Math.min(
+        1,
+        (window.innerWidth - 24) / cardWidth,
+        (window.innerHeight - 24 - BUTTON_BLOCK) / cardGroupHeight,
+      );
+      setContentScale(s > 0 ? s : 1);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [cardWidth, cardGroupHeight]);
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -273,7 +299,24 @@ export default function Spinner1Page() {
           </Link>
         </div>
       ) : (
-        <div className="relative flex flex-col items-center">
+        <div className="flex flex-col items-center">
+        {/* Only the headline + card scale to fit; the button stays full-size
+            below (so it remains tappable on mobile). Outer box reserves the
+            scaled footprint. */}
+        <div
+          style={{
+            width: contentScale < 1 ? cardWidth * contentScale : cardWidth,
+            height: contentScale < 1 ? cardGroupHeight * contentScale : undefined,
+          }}
+        >
+        <div
+          className="relative flex flex-col items-center"
+          style={{
+            width: cardWidth,
+            transform: `scale(${contentScale})`,
+            transformOrigin: "top left",
+          }}
+        >
           {/* Headline — sits just above the gold frame; z-20 so it stays on top
               of any splash that overflows up from the card. */}
           <div
@@ -385,30 +428,33 @@ export default function Spinner1Page() {
               </div>
             </div>
           </div>
+        </div>
+        </div>
 
-          {/* Draw button — same spacing as the other spinners; z-20 so it sits
-              on top of any splash overflowing down from the card. */}
-          {isReady && (
-            <div className="relative z-20 mt-8 flex flex-col items-center gap-6 sm:mt-10 sm:gap-7">
-              <button
-                onClick={handlePress}
-                disabled={phase === "stopping"}
-                style={{
-                  WebkitTextStroke: "0.03em currentColor",
-                  paintOrder: "stroke fill",
-                }}
-                className="font-names cursor-pointer rounded-full bg-white px-12 py-1.5 text-2xl uppercase leading-none tracking-[0.3em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl"
-              >
-                {buttonLabel}
-              </button>
-              <span className="text-[10px] font-normal tracking-wide text-white/55 sm:text-[11px]">
-                or press{" "}
-                <kbd className="rounded border border-white/25 bg-white/10 px-1.5 py-0.5 font-sans text-[10px] not-italic">
-                  Space
-                </kbd>
-              </span>
-            </div>
-          )}
+        {/* Draw button — full size below the scaled card (not scaled, so it
+            stays tappable on mobile); z-20 to sit over any lower splash. */}
+        {isReady && (
+          <div className="relative z-20 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7">
+            <button
+              onClick={handlePress}
+              disabled={phase === "stopping"}
+              style={{
+                WebkitTextStroke: "0.03em currentColor",
+                paintOrder: "stroke fill",
+              }}
+              className="font-names cursor-pointer rounded-full bg-white px-10 py-1.5 text-xl uppercase leading-none tracking-[0.25em] text-brand shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2 sm:text-3xl sm:tracking-[0.3em]"
+            >
+              {buttonLabel}
+            </button>
+            {/* Keyboard hint is irrelevant on touch — show on sm+ only. */}
+            <span className="hidden text-[11px] font-normal tracking-wide text-white/55 sm:block">
+              or press{" "}
+              <kbd className="rounded border border-white/25 bg-white/10 px-1.5 py-0.5 font-sans text-[10px] not-italic">
+                Space
+              </kbd>
+            </span>
+          </div>
+        )}
         </div>
       )}
 

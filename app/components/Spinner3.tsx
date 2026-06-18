@@ -42,6 +42,7 @@ export default function Spinner3Page() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
+  const [cardScale, setCardScale] = useState(1);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<{ gl: WebGLRenderingContext; tex: WebGLTexture } | null>(
@@ -70,6 +71,22 @@ export default function Spinner3Page() {
 
   const cardHeight = (ITEM_HEIGHT * 3) / WINDOW_VISIBLE_FRACTION;
   const cardWidth = cardHeight * FRAME_RATIO;
+
+  // Scale the whole card down to fit the viewport (preserving aspect) rather
+  // than squashing its width — keeps the frame proportional on mobile.
+  useEffect(() => {
+    const fit = () => {
+      const s = Math.min(
+        1,
+        (window.innerWidth - 24) / cardWidth,
+        (window.innerHeight - 200) / cardHeight,
+      );
+      setCardScale(s > 0 ? s : 1);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [cardWidth, cardHeight]);
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -365,10 +382,20 @@ export default function Spinner3Page() {
         </div>
       ) : (
         <>
-          {/* Card stage */}
+          {/* Card stage — scaled (not squashed) to fit the viewport. The outer
+              box reserves the scaled footprint so the button sits right below. */}
           <div
-            className="relative z-10 w-full max-w-[92vw]"
-            style={{ width: cardWidth, height: cardHeight }}
+            className="relative z-10"
+            style={{ width: cardWidth * cardScale, height: cardHeight * cardScale }}
+          >
+          <div
+            className="relative"
+            style={{
+              width: cardWidth,
+              height: cardHeight,
+              transform: `scale(${cardScale})`,
+              transformOrigin: "top left",
+            }}
           >
             {/* Reel window — blue fill (with flag corner) + scrolling names,
                 clipped to the card shape by masking with the same fill PNG. */}
@@ -451,10 +478,11 @@ export default function Spinner3Page() {
               className="pointer-events-none absolute inset-0 h-full w-full"
             />
           </div>
+          </div>
 
           {/* Draw button — custom pill image with the flag accent. */}
           {isReady && (
-            <div className="relative z-10 mt-8 flex flex-col items-center gap-6 sm:mt-10 sm:gap-7">
+            <div className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7">
               <button
                 onClick={handlePress}
                 disabled={phase === "stopping"}
@@ -465,11 +493,12 @@ export default function Spinner3Page() {
                   WebkitTextStroke: "0.03em currentColor",
                   paintOrder: "stroke fill",
                 }}
-                className="font-names cursor-pointer rounded-full px-12 py-2 text-2xl uppercase leading-none tracking-[0.3em] text-white drop-shadow-[0_12px_30px_rgba(8,82,168,0.45)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2.5 sm:text-3xl"
+                className="font-names cursor-pointer rounded-full px-10 py-2 text-xl uppercase leading-none tracking-[0.25em] text-white drop-shadow-[0_12px_30px_rgba(8,82,168,0.45)] transition hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:px-16 sm:py-2.5 sm:text-3xl sm:tracking-[0.3em]"
               >
                 {buttonLabel}
               </button>
-              <span className="text-[10px] font-normal tracking-wide text-brand-dark/60 sm:text-[11px]">
+              {/* Keyboard hint is irrelevant on touch — show on sm+ only. */}
+              <span className="hidden text-[11px] font-normal tracking-wide text-brand-dark/60 sm:block">
                 or press{" "}
                 <kbd className="rounded border border-brand/25 bg-brand/10 px-1.5 py-0.5 font-sans text-[10px] not-italic text-brand-dark">
                   Space

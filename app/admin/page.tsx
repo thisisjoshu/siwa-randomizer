@@ -18,7 +18,7 @@ const AUTH_KEY = "siwa.admin.authed";
 const LOGO = "/spinner2/sw-logo-white.png";
 
 const THEME_OPTIONS = [
-  { id: "spinner-1", label: "Tank", full: "Tank Campaign" },
+  { id: "spinner-1", label: "Custom", full: "Custom" },
   { id: "spinner-2", label: "Blue", full: "Blue stage" },
   { id: "spinner-3", label: "White", full: "White" },
 ];
@@ -57,9 +57,13 @@ function ThemeSelector() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="eyebrow text-[10px] text-white/55 sm:text-xs">Theme</span>
-      <div className="flex gap-1.5">
+    <div className="flex w-full items-center gap-2 sm:w-auto">
+      <span className="eyebrow shrink-0 text-[10px] text-white/55 sm:text-xs">
+        Theme
+      </span>
+      {/* Pills fill the row on mobile (bigger tap targets); natural width on
+          larger screens. */}
+      <div className="flex flex-1 gap-1.5 sm:flex-initial">
         {THEME_OPTIONS.map((opt) => {
           const active = theme === opt.id;
           return (
@@ -68,7 +72,7 @@ function ThemeSelector() {
               onClick={() => choose(opt.id)}
               aria-pressed={active}
               title={opt.full}
-              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+              className={`flex-1 rounded-full px-3 py-2 text-center text-xs font-bold uppercase tracking-wide transition sm:flex-none sm:px-4 sm:py-1.5 ${
                 active
                   ? "bg-white text-brand-darker shadow-sm ring-2 ring-brand-cyan/60"
                   : "cursor-pointer bg-white/10 text-white/75 ring-1 ring-white/20 hover:bg-white/20 hover:text-white"
@@ -80,9 +84,9 @@ function ThemeSelector() {
         })}
       </div>
       {/* Fixed-width slot so the status text doesn't reflow the pills (flicker). */}
-      <span className="w-20 text-[11px] font-semibold">
+      <span className="w-16 shrink-0 text-right text-[11px] font-semibold sm:w-20">
         {error ? (
-          <span className="text-red-300">Save failed</span>
+          <span className="text-red-300">Failed</span>
         ) : saving ? (
           <span className="text-white/40">Saving…</span>
         ) : null}
@@ -273,13 +277,13 @@ function NameEditor() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
+      <header className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO} alt="Solomon Water" className="h-12 w-auto shrink-0 sm:h-14" />
+          <img src={LOGO} alt="Solomon Water" className="h-10 w-auto shrink-0 sm:h-14" />
           <h1
             style={{ WebkitTextStroke: "0.02em currentColor", paintOrder: "stroke fill" }}
-            className="font-names text-4xl uppercase tracking-wide text-white/90 sm:text-5xl"
+            className="font-names text-3xl uppercase tracking-wide text-white/90 sm:text-5xl"
           >
             Manage Names
           </h1>
