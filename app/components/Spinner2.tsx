@@ -250,7 +250,7 @@ export default function Spinner2Page() {
       className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
       style={{
         backgroundColor: "#1c4e9d", // gradient avg — fallback before the image loads
-        backgroundImage: `url(${ASSET}/bg-gradient.png)`,
+        backgroundImage: `url(${ASSET}/bg-gradient.webp)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -304,11 +304,11 @@ export default function Spinner2Page() {
                 bottom: WINDOW_INSET_Y,
                 left: WINDOW_INSET_X,
                 right: WINDOW_INSET_X,
-                backgroundImage: `url(${ASSET}/reel-fill.png)`,
+                backgroundImage: `url(${ASSET}/reel-fill.webp)`,
                 backgroundSize: "100% 100%",
-                WebkitMaskImage: `url(${ASSET}/reel-fill.png)`,
+                WebkitMaskImage: `url(${ASSET}/reel-fill.webp)`,
                 WebkitMaskSize: "100% 100%",
-                maskImage: `url(${ASSET}/reel-fill.png)`,
+                maskImage: `url(${ASSET}/reel-fill.webp)`,
                 maskSize: "100% 100%",
               }}
             >
@@ -395,7 +395,7 @@ export default function Spinner2Page() {
             {/* White frame + side notches on top of everything. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ASSET}/frame.png`}
+              src={`${ASSET}/frame.webp`}
               alt=""
               className="pointer-events-none absolute inset-0 h-full w-full"
             />

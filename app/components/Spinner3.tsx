@@ -328,7 +328,7 @@ export default function Spinner3Page() {
       className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-8 text-brand-ink"
       style={{
         backgroundColor: "#fafafa", // near-white — fallback before the image loads
-        backgroundImage: `url(${ASSET}/bg.png)`,
+        backgroundImage: `url(${ASSET}/bg.webp)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -379,11 +379,11 @@ export default function Spinner3Page() {
                 bottom: WINDOW_INSET_Y,
                 left: WINDOW_INSET_X,
                 right: WINDOW_INSET_X,
-                backgroundImage: `url(${ASSET}/card-fill.png)`,
+                backgroundImage: `url(${ASSET}/card-fill.webp)`,
                 backgroundSize: "100% 100%",
-                WebkitMaskImage: `url(${ASSET}/card-fill.png)`,
+                WebkitMaskImage: `url(${ASSET}/card-fill.webp)`,
                 WebkitMaskSize: "100% 100%",
-                maskImage: `url(${ASSET}/card-fill.png)`,
+                maskImage: `url(${ASSET}/card-fill.webp)`,
                 maskSize: "100% 100%",
               }}
             >
@@ -446,7 +446,7 @@ export default function Spinner3Page() {
             {/* Blue outline frame + side notches on top of everything. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ASSET}/frame.png`}
+              src={`${ASSET}/frame.webp`}
               alt=""
               className="pointer-events-none absolute inset-0 h-full w-full"
             />

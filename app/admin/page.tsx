@@ -119,7 +119,7 @@ export default function AdminPage() {
       <div
         className="pointer-events-none fixed inset-0 -z-10 bg-background"
         style={{
-          backgroundImage: `url(/tank/bg.png)`,
+          backgroundImage: `url(/tank/bg.webp)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

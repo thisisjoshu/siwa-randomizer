@@ -245,7 +245,7 @@ export default function Spinner1Page() {
       className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
       style={{
         backgroundColor: "#185fa9", // wave avg — fallback before the image loads
-        backgroundImage: `url(${ASSET}/bg.png)`,
+        backgroundImage: `url(${ASSET}/bg.webp)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -282,14 +282,14 @@ export default function Spinner1Page() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ASSET}/winbig.png`}
+              src={`${ASSET}/winbig.webp`}
               alt="Win big with"
               className="w-auto"
               style={{ height: cardHeight * HEADLINE_LINE_FRAC }}
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ASSET}/solomonwater.png`}
+              src={`${ASSET}/solomonwater.webp`}
               alt="Solomon Water"
               className="w-auto"
               style={{
@@ -308,7 +308,7 @@ export default function Spinner1Page() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`${ASSET}/card.png`}
+              src={`${ASSET}/card.webp`}
               alt=""
               className="pointer-events-none absolute max-w-none"
               style={{

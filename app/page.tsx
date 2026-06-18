@@ -17,7 +17,7 @@ export default function Home() {
       <div
         className="flex flex-1 bg-background"
         style={{
-          backgroundImage: `url(/tank/bg.png)`,
+          backgroundImage: `url(/tank/bg.webp)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
