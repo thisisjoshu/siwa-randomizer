@@ -2,13 +2,94 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { loadNames, saveNames } from "../lib/store";
+import {
+  loadNames,
+  saveNames,
+  loadTheme,
+  saveTheme,
+  DEFAULT_THEME,
+} from "../lib/store";
 
 // NOTE: this is a light client-side gate, not real security — anyone who really
 // wants in can read the bundle. It only stops casual/viewer edits, which is all
 // this internal tool needs. Override the default via NEXT_PUBLIC_ADMIN_PASSWORD.
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "siwa-admin";
 const AUTH_KEY = "siwa.admin.authed";
+const LOGO = "/spinner2/sw-logo-white.png";
+
+const THEME_OPTIONS = [
+  { id: "spinner-1", label: "Tank", full: "Tank Campaign" },
+  { id: "spinner-2", label: "Blue", full: "Blue stage" },
+  { id: "spinner-3", label: "White", full: "White" },
+];
+
+// Compact theme picker: three pills that persist on click (one setting, no
+// draft). Lives in the header so the right column stays focused on names.
+function ThemeSelector() {
+  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    loadTheme().then((t) => {
+      if (active) setTheme(t);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const choose = async (id: string) => {
+    if (id === theme || saving) return;
+    const prev = theme;
+    setTheme(id);
+    setSaving(true);
+    setError(false);
+    try {
+      setTheme(await saveTheme(id));
+    } catch {
+      setTheme(prev);
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="eyebrow text-[10px] text-white/55 sm:text-xs">Theme</span>
+      <div className="flex gap-1.5">
+        {THEME_OPTIONS.map((opt) => {
+          const active = theme === opt.id;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => choose(opt.id)}
+              aria-pressed={active}
+              title={opt.full}
+              className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+                active
+                  ? "border-brand-cyan bg-brand-cyan/15 text-brand-light"
+                  : "cursor-pointer border-white/20 text-white/70 hover:border-white/40 hover:text-white"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      {/* Fixed-width slot so the status text doesn't reflow the pills (flicker). */}
+      <span className="w-20 text-[11px] font-semibold">
+        {error ? (
+          <span className="text-red-300">Save failed</span>
+        ) : saving ? (
+          <span className="text-white/40">Saving…</span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
@@ -32,21 +113,22 @@ export default function AdminPage() {
   if (!ready) return <div className="min-h-screen bg-brand-darker" />;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-brand-darker via-brand-dark to-brand px-4 py-12 text-white sm:px-6">
-      {/* Background glow on its own fixed layer so it doesn't clip (and break
-          position: sticky on) the content below. */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div
-          className="absolute left-1/2 top-0 h-[80vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/3"
-          style={{
-            background:
-              "radial-gradient(closest-side, rgba(0,168,230,0.22), transparent 70%)",
-          }}
-        />
-      </div>
+    <div className="relative min-h-screen px-4 py-12 text-white sm:px-6">
+      {/* Shared spinner background (blue wave), fixed so it stays put while the
+          admin list scrolls. A soft dark vignette keeps text readable. */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 bg-brand-darker"
+        style={{
+          backgroundImage: `url(/tank/bg.png)`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(11,32,48,0.55))]" />
+
       <Link
         href="/"
-        className="eyebrow absolute right-4 top-4 z-20 text-[10px] text-white/45 transition hover:text-brand-light sm:right-6 sm:top-6 sm:text-xs"
+        className="eyebrow absolute right-4 top-4 z-20 text-[10px] text-white/55 transition hover:text-white sm:right-6 sm:top-6 sm:text-xs"
       >
         Spinner →
       </Link>
@@ -71,38 +153,39 @@ function PasswordGate({ onAuthed }: { onAuthed: () => void }) {
   };
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col items-center justify-center text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-cyan/15 text-2xl ring-1 ring-brand-cyan/40">
-        💧
-      </span>
-      <p className="eyebrow mt-5 text-[11px] text-brand-light sm:text-xs">
-        Solomon Water
-      </p>
-      <h1 className="font-display mt-2 text-4xl uppercase sm:text-5xl">Admin</h1>
-      <form onSubmit={submit} className="mt-8 w-full">
-        <input
-          autoFocus
-          type="password"
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setError(false);
-          }}
-          placeholder="Password"
-          className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-center text-lg tracking-widest text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
-        />
-        {error && (
-          <p className="mt-3 text-sm font-semibold text-red-300">
-            Incorrect password
-          </p>
-        )}
-        <button
-          type="submit"
-          className="mt-5 w-full rounded-full bg-white px-8 py-3 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-[1.02]"
-        >
-          Unlock
-        </button>
-      </form>
+    <div className="mx-auto flex min-h-[78vh] max-w-md flex-col items-center justify-center">
+      {/* Frosted card with a gold ring nodding to the spinner-1 frame. */}
+      <div className="w-full rounded-3xl border border-white/10 bg-brand-darker/40 px-8 py-10 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] ring-1 ring-amber-200/25 backdrop-blur-md sm:px-10 sm:py-12">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={LOGO} alt="Solomon Water" className="mx-auto h-auto w-40 sm:w-48" />
+        <h1 className="font-display mt-6 text-4xl uppercase leading-none sm:text-5xl">
+          Admin
+        </h1>
+        <form onSubmit={submit} className="mt-8 w-full">
+          <input
+            autoFocus
+            type="password"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setError(false);
+            }}
+            placeholder="Password"
+            className="w-full rounded-xl border border-white/15 bg-brand-ink/40 px-4 py-3 text-center text-lg tracking-widest text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+          />
+          {error && (
+            <p className="mt-3 text-sm font-semibold text-red-300">
+              Incorrect password
+            </p>
+          )}
+          <button
+            type="submit"
+            className="mt-5 w-full cursor-pointer rounded-full bg-white px-8 py-3 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/40 transition hover:scale-[1.02]"
+          >
+            Unlock
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -187,18 +270,15 @@ function NameEditor() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <header className="flex items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-cyan/15 text-xl ring-1 ring-brand-cyan/40">
-          💧
-        </span>
-        <div>
-          <p className="eyebrow text-[10px] text-brand-light sm:text-xs">
-            Solomon Water
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={LOGO} alt="Solomon Water" className="h-12 w-auto shrink-0 sm:h-14" />
           <h1 className="font-display text-3xl uppercase leading-none sm:text-4xl">
             Manage Names
           </h1>
         </div>
+        <ThemeSelector />
       </header>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_minmax(340px,400px)] lg:items-start">
@@ -226,12 +306,12 @@ function NameEditor() {
                   value={name}
                   onChange={(e) => updateRow(i, e.target.value)}
                   placeholder="Name"
-                  className="flex-1 rounded-lg border border-white/15 bg-black/30 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+                  className="flex-1 rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
                 />
                 <button
                   onClick={() => removeRow(i)}
                   aria-label={`Remove ${name || "name"}`}
-                  className="shrink-0 rounded-lg border border-white/15 px-3 py-2.5 text-sm font-bold text-white/50 transition hover:border-red-400 hover:bg-red-400/10 hover:text-red-300"
+                  className="shrink-0 cursor-pointer rounded-lg border border-white/15 px-3 py-2.5 text-sm font-bold text-white/50 transition hover:border-red-400 hover:bg-red-400/10 hover:text-red-300"
                 >
                   ✕
                 </button>
@@ -243,7 +323,7 @@ function NameEditor() {
         {/* RIGHT: data-entry panel, fixed while the list scrolls */}
         <div className="space-y-5 lg:sticky lg:top-6">
           {/* Quick add */}
-          <section className="rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur sm:p-6">
+          <section className="rounded-2xl border border-white/10 bg-brand-darker/40 p-5 backdrop-blur-md sm:p-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-white/70">
               Add a name
             </h2>
@@ -261,12 +341,12 @@ function NameEditor() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Type a name…"
-                className="flex-1 rounded-lg border border-white/15 bg-black/30 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+                className="flex-1 rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
               />
               <button
                 type="submit"
                 disabled={newName.trim().length === 0}
-                className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-[0.15em] text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="cursor-pointer rounded-lg bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-[0.15em] text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
               >
                 Add
               </button>
@@ -274,7 +354,7 @@ function NameEditor() {
           </section>
 
           {/* Bulk paste */}
-          <details open className="group rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur sm:p-6">
+          <details open className="group rounded-2xl border border-white/10 bg-brand-darker/40 p-5 backdrop-blur-md sm:p-6">
             <summary className="flex cursor-pointer items-center justify-between text-xs font-bold uppercase tracking-[0.15em] text-white/70 marker:content-none">
               <span>Bulk paste</span>
               <span className="text-brand-light transition group-open:rotate-180">▾</span>
@@ -288,20 +368,20 @@ function NameEditor() {
               onChange={(e) => setBulk(e.target.value)}
               rows={6}
               placeholder={"Jane Doe\nJohn Smith\n…"}
-              className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-black/30 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+              className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
             />
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => applyBulk("append")}
                 disabled={bulk.trim().length === 0}
-                className="rounded-full bg-white px-5 py-2 text-xs font-bold uppercase tracking-widest text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-white px-5 py-2 text-xs font-bold uppercase tracking-widest text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Append
               </button>
               <button
                 onClick={() => applyBulk("replace")}
                 disabled={bulk.trim().length === 0}
-                className="rounded-full border border-white/30 px-5 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white transition hover:border-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full border border-white/30 px-5 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white transition hover:border-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Replace all
               </button>
@@ -312,14 +392,14 @@ function NameEditor() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={clearAll}
-              className="rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white/70 transition hover:border-red-400 hover:text-red-300"
+              className="cursor-pointer rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white/70 transition hover:border-red-400 hover:text-red-300"
             >
               Clear all
             </button>
           </div>
 
           {/* Save */}
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-brand-darker/90 px-5 py-3.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-brand-cyan/10 backdrop-blur">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-brand-darker/70 px-5 py-3.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-brand-cyan/10 backdrop-blur-md">
             <span className="flex items-center gap-2 text-sm font-semibold">
               {saveError ? (
                 <span className="text-red-300">⚠ Save failed, try again</span>
@@ -341,7 +421,7 @@ function NameEditor() {
             <button
               onClick={save}
               disabled={!dirty || saving}
-              className="rounded-full bg-white px-8 py-2.5 text-sm font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_10px_30px_-8px_rgba(0,168,230,0.7)] ring-1 ring-white/40 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="cursor-pointer rounded-full bg-white px-8 py-2.5 text-sm font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_10px_30px_-8px_rgba(0,0,0,0.5)] ring-1 ring-white/40 transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               {saving ? "Saving…" : "Save"}
             </button>

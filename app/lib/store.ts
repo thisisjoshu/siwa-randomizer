@@ -39,6 +39,64 @@ export async function saveNames(names: string[]): Promise<string[]> {
   return Array.isArray(data?.names) ? (data.names as string[]) : [];
 }
 
+// ---- Display theme (which spinner the index shows) ----------------------
+const THEME_ENDPOINT = "/api/theme";
+export const DEFAULT_THEME = "spinner-1";
+
+export async function loadTheme(): Promise<string> {
+  try {
+    const res = await fetch(THEME_ENDPOINT, { cache: "no-store" });
+    if (!res.ok) return DEFAULT_THEME;
+    const data = await res.json();
+    return typeof data?.theme === "string" ? data.theme : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
+export async function saveTheme(theme: string): Promise<string> {
+  const res = await fetch(THEME_ENDPOINT, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme }),
+  });
+  if (!res.ok) throw new Error(`Failed to save theme (${res.status})`);
+  const data = await res.json();
+  return typeof data?.theme === "string" ? data.theme : DEFAULT_THEME;
+}
+
+// Live-ish theme for the index display — same fetch/focus/poll pattern as
+// useNames, so switching the theme in the admin updates the live display.
+export function useTheme(): { theme: string; loaded: boolean } {
+  const [theme, setTheme] = useState<string>(DEFAULT_THEME);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const sync = async () => {
+      const next = await loadTheme();
+      if (!active) return;
+      setTheme((prev) => (prev === next ? prev : next));
+      setLoaded(true);
+    };
+    sync();
+
+    const onFocus = () => sync();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    const id = window.setInterval(sync, POLL_MS);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  return { theme, loaded };
+}
+
 // Live-ish list of names for the spinner. Fetches on mount, whenever the tab
 // regains focus, and on a slow poll — so a Save in the admin shows up on the
 // display without a manual refresh, even on a separate device. `loaded` flips
