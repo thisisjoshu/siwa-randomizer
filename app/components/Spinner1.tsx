@@ -58,8 +58,12 @@ const HEADLINE_BOTTOM_GAP_FRAC = -0.09;
 
 type Phase = "idle" | "spinning" | "stopping" | "revealed";
 
-export default function Spinner1Page() {
-  const { names, loaded } = useNames();
+export default function Spinner1Page({
+  initialNames,
+}: {
+  initialNames?: string[];
+}) {
+  const { names, loaded } = useNames(initialNames);
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import Link from "next/link";
 import { pickRandomName } from "../lib/names";
 import { useNames } from "../lib/store";
@@ -36,8 +37,12 @@ const ASSET = "/spinner3";
 
 type Phase = "idle" | "spinning" | "stopping" | "revealed";
 
-export default function Spinner3Page() {
-  const { names, loaded } = useNames();
+export default function Spinner3Page({
+  initialNames,
+}: {
+  initialNames?: string[];
+}) {
+  const { names, loaded } = useNames(initialNames);
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);
@@ -346,6 +351,12 @@ export default function Spinner3Page() {
   const isEmpty = loaded && names.length === 0;
   const isReady = loaded && names.length > 0;
 
+  // Raise priority on this theme's CSS-background images (otherwise they're
+  // fetched late/low-priority and can be starved on a busy connection).
+  ReactDOM.preload(`${ASSET}/card-fill.webp`, { as: "image" });
+  ReactDOM.preload(`${ASSET}/frame.webp`, { as: "image" });
+  ReactDOM.preload(`${ASSET}/draw-bg.png`, { as: "image" });
+
   return (
     <div
       className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-8 text-brand-ink"
@@ -493,6 +504,9 @@ export default function Spinner3Page() {
                 onClick={handlePress}
                 disabled={phase === "stopping"}
                 style={{
+                  // Fallback fill so the pill never shows blank while the (low
+                  // priority) flag-accent image loads.
+                  backgroundColor: "#1763a8",
                   backgroundImage: `url(${ASSET}/draw-bg.png)`,
                   backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",

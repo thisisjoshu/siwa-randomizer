@@ -26,7 +26,7 @@ const THEME_OPTIONS = [
 // Compact theme picker: three pills that persist on click (one setting, no
 // draft). Lives in the header so the right column stays focused on names.
 function ThemeSelector() {
-  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [theme, setTheme] = useState<string>(DEFAULT_THEME);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
 
