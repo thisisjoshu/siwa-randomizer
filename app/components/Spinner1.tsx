@@ -131,9 +131,17 @@ export default function Spinner1Page({
         setCardReady(true);
       }
     };
-    const img = new Image();
-    img.src = `${ASSET}/card.webp`;
-    img.decode().then(ready, ready);
+    Promise.all(
+      [
+        `${ASSET}/card.webp`,
+        `${ASSET}/winbig.webp`,
+        `${ASSET}/solomonwater.webp`,
+      ].map((src) => {
+        const img = new Image();
+        img.src = src;
+        return img.decode().catch(() => {});
+      }),
+    ).then(ready, ready);
     const t = window.setTimeout(ready, 1500);
     return () => {
       done = true;
@@ -330,7 +338,10 @@ export default function Spinner1Page({
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col items-center">
+        <div
+          className="flex flex-col items-center"
+          style={{ opacity: cardReady ? 1 : 0, transition: "opacity 250ms ease" }}
+        >
         {/* Only the headline + card scale to fit; the button stays full-size
             below (so it remains tappable on mobile). Outer box reserves the
             scaled footprint. */}
@@ -376,15 +387,7 @@ export default function Spinner1Page({
           {/* Card box = the gold frame. The composite is larger and offset so its
               frame lands here; the splash + leaves overflow around (the page root
               clips them, so they never add scroll). */}
-          <div
-            className="relative z-10"
-            style={{
-              width: cardWidth,
-              height: cardHeight,
-              opacity: cardReady ? 1 : 0,
-              transition: "opacity 250ms ease",
-            }}
-          >
+          <div className="relative z-10" style={{ width: cardWidth, height: cardHeight }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`${ASSET}/card.webp`}

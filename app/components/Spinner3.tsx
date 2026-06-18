@@ -105,7 +105,12 @@ export default function Spinner3Page({
       }
     };
     Promise.all(
-      [`${ASSET}/frame.webp`, `${ASSET}/card-fill.webp`].map((src) => {
+      [
+        `${ASSET}/frame.webp`,
+        `${ASSET}/card-fill.webp`,
+        `${ASSET}/logo-color.png`,
+        `${ASSET}/draw-bg.png`,
+      ].map((src) => {
         const img = new Image();
         img.src = src;
         return img.decode().catch(() => {});
@@ -399,12 +404,13 @@ export default function Spinner3Page({
         Admin →
       </Link>
 
-      {/* Full-colour logo */}
+      {/* Full-colour logo — revealed together with the card. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`${ASSET}/logo-color.png`}
         alt="Solomon Water"
         className="relative z-10 mb-8 h-auto w-44 sm:mb-12 sm:w-56"
+        style={{ opacity: cardReady ? 1 : 0, transition: "opacity 250ms ease" }}
       />
 
       {isEmpty ? (
@@ -524,9 +530,13 @@ export default function Spinner3Page({
           </div>
           </div>
 
-          {/* Draw button — custom pill image with the flag accent. */}
+          {/* Draw button — custom pill image with the flag accent; revealed
+              together with the card. */}
           {isReady && (
-            <div className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7">
+            <div
+              className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7"
+              style={{ opacity: cardReady ? 1 : 0, transition: "opacity 250ms ease" }}
+            >
               <button
                 onClick={handlePress}
                 disabled={phase === "stopping"}

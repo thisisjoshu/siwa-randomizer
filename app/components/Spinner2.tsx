@@ -108,7 +108,11 @@ export default function Spinner2Page({
       }
     };
     Promise.all(
-      [`${ASSET}/frame.webp`, `${ASSET}/reel-fill.webp`].map((src) => {
+      [
+        `${ASSET}/frame.webp`,
+        `${ASSET}/reel-fill.webp`,
+        `${ASSET}/sw-logo-white.png`,
+      ].map((src) => {
         const img = new Image();
         img.src = src;
         return img.decode().catch(() => {});
@@ -314,12 +318,13 @@ export default function Spinner2Page({
         Admin →
       </Link>
 
-      {/* Logo */}
+      {/* Logo — revealed together with the card. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`${ASSET}/sw-logo-white.png`}
         alt="Solomon Water"
         className="relative z-10 mb-8 h-auto w-40 sm:mb-12 sm:w-52"
+        style={{ opacity: cardReady ? 1 : 0, transition: "opacity 250ms ease" }}
       />
 
       {isEmpty ? (
@@ -463,9 +468,12 @@ export default function Spinner2Page({
           </div>
           </div>
 
-          {/* Draw button */}
+          {/* Draw button — revealed together with the card. */}
           {isReady && (
-            <div className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7">
+            <div
+              className="relative z-10 mt-6 flex flex-col items-center gap-4 sm:mt-10 sm:gap-7"
+              style={{ opacity: cardReady ? 1 : 0, transition: "opacity 250ms ease" }}
+            >
               <button
                 onClick={handlePress}
                 disabled={phase === "stopping"}

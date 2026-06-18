@@ -297,17 +297,23 @@ function NameEditor() {
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h2 className="eyebrow text-xs text-white/70">Names</h2>
             <span className="rounded-full bg-brand-cyan/15 px-3 py-1 text-xs font-bold text-brand-light ring-1 ring-brand-cyan/30">
-              {validCount} in draw
+              {loaded ? `${validCount} in draw` : "…"}
             </span>
           </div>
 
           <div className="mt-4 space-y-2">
-            {draft.length === 0 && (
+            {!loaded ? (
+              <div className="flex items-center justify-center gap-3 rounded-xl border border-white/10 px-4 py-10 text-sm text-white/50">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-white/80" />
+                Loading names…
+              </div>
+            ) : draft.length === 0 ? (
               <p className="rounded-xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-white/50">
                 No names yet. Add one on the right or paste a list.
               </p>
-            )}
-            {draft.map((name, i) => (
+            ) : null}
+            {loaded &&
+              draft.map((name, i) => (
               <div key={i} className="group flex items-center gap-2">
                 <span className="w-6 shrink-0 text-right text-xs tabular-nums text-white/35">
                   {i + 1}
@@ -321,7 +327,7 @@ function NameEditor() {
                 <button
                   onClick={() => removeRow(i)}
                   aria-label={`Remove ${name || "name"}`}
-                  className="shrink-0 cursor-pointer rounded-lg border border-white/15 px-3 py-2.5 text-sm font-bold text-white/50 transition hover:border-red-400 hover:bg-red-400/10 hover:text-red-300"
+                  className="shrink-0 cursor-pointer rounded-full border border-white/15 px-3 py-2.5 text-sm font-bold text-white/50 transition hover:border-red-700 hover:bg-red-700/15 hover:text-red-600"
                 >
                   ✕
                 </button>
@@ -402,7 +408,7 @@ function NameEditor() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={clearAll}
-              className="cursor-pointer rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white/70 transition hover:border-red-400 hover:text-red-300"
+              className="cursor-pointer rounded-full border border-white/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white/70 transition hover:border-red-700 hover:bg-red-700/15 hover:text-red-600"
             >
               Clear all
             </button>
