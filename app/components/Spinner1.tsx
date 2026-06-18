@@ -324,6 +324,15 @@ export default function Spinner1Page({
 
       {isEmpty ? (
         <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
+          {/* Solomon Water logo — only shown in the empty state (the live draw
+              uses the WIN BIG WITH / SOLOMON WATER headline instead). Shares the
+              white logo from spinner 2. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/spinner2/sw-logo-white.png"
+            alt="Solomon Water"
+            className="mb-8 h-auto w-40 sm:mb-12 sm:w-52"
+          />
           <h2 className="font-names text-4xl uppercase leading-none sm:text-5xl">
             No names to draw yet
           </h2>
