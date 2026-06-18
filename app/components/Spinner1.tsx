@@ -69,6 +69,7 @@ export default function Spinner1Page({
   const [showConfetti, setShowConfetti] = useState(false);
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
   const [contentScale, setContentScale] = useState(1);
+  const [cardReady, setCardReady] = useState(false);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
   const reelInnerRef = useRef<HTMLDivElement>(null);
   const lastWinnerRef = useRef<string | null>(null);
@@ -119,6 +120,26 @@ export default function Spinner1Page({
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, [cardWidth, cardGroupHeight]);
+
+  // Keep the card hidden until its composite (frame + fill + splash) has decoded
+  // so the names never show on a bare window. Timeout fallback so it can't hang.
+  useEffect(() => {
+    let done = false;
+    const ready = () => {
+      if (!done) {
+        done = true;
+        setCardReady(true);
+      }
+    };
+    const img = new Image();
+    img.src = `${ASSET}/card.webp`;
+    img.decode().then(ready, ready);
+    const t = window.setTimeout(ready, 1500);
+    return () => {
+      done = true;
+      window.clearTimeout(t);
+    };
+  }, []);
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -357,7 +378,12 @@ export default function Spinner1Page({
               clips them, so they never add scroll). */}
           <div
             className="relative z-10"
-            style={{ width: cardWidth, height: cardHeight }}
+            style={{
+              width: cardWidth,
+              height: cardHeight,
+              opacity: cardReady ? 1 : 0,
+              transition: "opacity 250ms ease",
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

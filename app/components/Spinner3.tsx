@@ -48,6 +48,7 @@ export default function Spinner3Page({
   const [showConfetti, setShowConfetti] = useState(false);
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
   const [cardScale, setCardScale] = useState(1);
+  const [cardReady, setCardReady] = useState(false);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<{ gl: WebGLRenderingContext; tex: WebGLTexture } | null>(
@@ -92,6 +93,30 @@ export default function Spinner3Page({
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, [cardWidth, cardHeight]);
+
+  // Keep the card hidden until the frame + card fill have decoded, so the names
+  // never show on a bare window. Timeout fallback so it can't hang.
+  useEffect(() => {
+    let done = false;
+    const ready = () => {
+      if (!done) {
+        done = true;
+        setCardReady(true);
+      }
+    };
+    Promise.all(
+      [`${ASSET}/frame.webp`, `${ASSET}/card-fill.webp`].map((src) => {
+        const img = new Image();
+        img.src = src;
+        return img.decode().catch(() => {});
+      }),
+    ).then(ready, ready);
+    const t = window.setTimeout(ready, 1500);
+    return () => {
+      done = true;
+      window.clearTimeout(t);
+    };
+  }, []);
 
   const cancelRaf = () => {
     if (rafRef.current !== null) {
@@ -412,6 +437,8 @@ export default function Spinner3Page({
               height: cardHeight,
               transform: `scale(${cardScale})`,
               transformOrigin: "top left",
+              opacity: cardReady ? 1 : 0,
+              transition: "opacity 250ms ease",
             }}
           >
             {/* Reel window — blue fill (with flag corner) + scrolling names,
@@ -504,9 +531,6 @@ export default function Spinner3Page({
                 onClick={handlePress}
                 disabled={phase === "stopping"}
                 style={{
-                  // Fallback fill so the pill never shows blank while the (low
-                  // priority) flag-accent image loads.
-                  backgroundColor: "#1763a8",
                   backgroundImage: `url(${ASSET}/draw-bg.png)`,
                   backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
