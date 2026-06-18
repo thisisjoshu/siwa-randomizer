@@ -249,6 +249,7 @@ export default function Spinner2Page() {
     <div
       className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
       style={{
+        backgroundColor: "#1c4e9d", // gradient avg — fallback before the image loads
         backgroundImage: `url(${ASSET}/bg-gradient.png)`,
         backgroundSize: "cover",
         backgroundPosition: "center",

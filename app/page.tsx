@@ -10,8 +10,19 @@ import Spinner3 from "./components/Spinner3";
 export default function Home() {
   const { theme, loaded } = useTheme();
 
-  // Avoid flashing the default before the saved theme resolves.
-  if (!loaded) return <div className="flex flex-1 bg-brand-darker" />;
+  // Avoid flashing a flat colour before the saved theme resolves — use the same
+  // wave background as the admin so the hand-off into a spinner is seamless.
+  if (!loaded)
+    return (
+      <div
+        className="flex flex-1 bg-background"
+        style={{
+          backgroundImage: `url(/tank/bg.png)`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+    );
 
   if (theme === "spinner-2") return <Spinner2 />;
   if (theme === "spinner-3") return <Spinner3 />;

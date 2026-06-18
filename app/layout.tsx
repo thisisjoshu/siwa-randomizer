@@ -30,8 +30,18 @@ const winBigFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "SIWA Randomizer",
+  title: "SIWA Spinner",
   description: "Live winner reveal displays for Solomon Water.",
+  // app/favicon.ico covers the base icon; these add the PNG sizes, the iOS
+  // home-screen icon, and the web manifest (see public/favicon/).
+  icons: {
+    icon: [
+      { url: "/favicon/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: "/favicon/apple-touch-icon.png",
+  },
+  manifest: "/favicon/site.webmanifest",
 };
 
 export default function RootLayout({

@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5fbfe;
-  --foreground: #0b2030;
+  /* Base canvas = the average blue of the wave background image, so the fallback
+     fill (and any route-transition flash) blends with it instead of showing a
+     darker/inkier colour. Every screen paints its own bg over this. */
+  --background: #185fa9;
+  --foreground: #ffffff;
 
   --brand: #218acc;
   --brand-dark: #165d8a;

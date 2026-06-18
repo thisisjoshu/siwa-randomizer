@@ -68,10 +68,10 @@ function ThemeSelector() {
               onClick={() => choose(opt.id)}
               aria-pressed={active}
               title={opt.full}
-              className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
                 active
-                  ? "border-brand-cyan bg-brand-cyan/15 text-brand-light"
-                  : "cursor-pointer border-white/20 text-white/70 hover:border-white/40 hover:text-white"
+                  ? "bg-white text-brand-darker shadow-sm ring-2 ring-brand-cyan/60"
+                  : "cursor-pointer bg-white/10 text-white/75 ring-1 ring-white/20 hover:bg-white/20 hover:text-white"
               }`}
             >
               {opt.label}
@@ -110,21 +110,21 @@ export default function AdminPage() {
     setAuthed(true);
   }, []);
 
-  if (!ready) return <div className="min-h-screen bg-brand-darker" />;
+  if (!ready) return <div className="min-h-screen bg-background" />;
 
   return (
     <div className="relative min-h-screen px-4 py-12 text-white sm:px-6">
       {/* Shared spinner background (blue wave), fixed so it stays put while the
           admin list scrolls. A soft dark vignette keeps text readable. */}
       <div
-        className="pointer-events-none fixed inset-0 -z-10 bg-brand-darker"
+        className="pointer-events-none fixed inset-0 -z-10 bg-background"
         style={{
           backgroundImage: `url(/tank/bg.png)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       />
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(11,32,48,0.55))]" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_65%,rgba(24,95,169,0.35))]" />
 
       <Link
         href="/"
@@ -155,10 +155,13 @@ function PasswordGate({ onAuthed }: { onAuthed: () => void }) {
   return (
     <div className="mx-auto flex min-h-[78vh] max-w-md flex-col items-center justify-center">
       {/* Frosted card with a gold ring nodding to the spinner-1 frame. */}
-      <div className="w-full rounded-3xl border border-white/10 bg-brand-darker/40 px-8 py-10 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] ring-1 ring-amber-200/25 backdrop-blur-md sm:px-10 sm:py-12">
+      <div className="w-full rounded-3xl border border-white/10 bg-background/40 px-8 py-10 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] ring-1 ring-amber-200/25 backdrop-blur-md sm:px-10 sm:py-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={LOGO} alt="Solomon Water" className="mx-auto h-auto w-40 sm:w-48" />
-        <h1 className="font-display mt-6 text-4xl uppercase leading-none sm:text-5xl">
+        <h1
+          style={{ WebkitTextStroke: "0.016em currentColor", paintOrder: "stroke fill" }}
+          className="font-names mt-5 text-5xl uppercase tracking-wide text-white/90 sm:text-6xl"
+        >
           Admin
         </h1>
         <form onSubmit={submit} className="mt-8 w-full">
@@ -271,10 +274,13 @@ function NameEditor() {
   return (
     <div className="mx-auto max-w-7xl">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={LOGO} alt="Solomon Water" className="h-12 w-auto shrink-0 sm:h-14" />
-          <h1 className="font-display text-3xl uppercase leading-none sm:text-4xl">
+          <h1
+            style={{ WebkitTextStroke: "0.02em currentColor", paintOrder: "stroke fill" }}
+            className="font-names text-4xl uppercase tracking-wide text-white/90 sm:text-5xl"
+          >
             Manage Names
           </h1>
         </div>
@@ -323,7 +329,7 @@ function NameEditor() {
         {/* RIGHT: data-entry panel, fixed while the list scrolls */}
         <div className="space-y-5 lg:sticky lg:top-6">
           {/* Quick add */}
-          <section className="rounded-2xl border border-white/10 bg-brand-darker/40 p-5 backdrop-blur-md sm:p-6">
+          <section className="rounded-2xl border border-white/10 bg-background/40 p-5 backdrop-blur-md sm:p-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-white/70">
               Add a name
             </h2>
@@ -335,18 +341,18 @@ function NameEditor() {
                 e.preventDefault();
                 addNamed();
               }}
-              className="mt-3 flex gap-2"
+              className="mt-3 flex items-center gap-2"
             >
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Type a name…"
-                className="flex-1 rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+                className="flex-1 rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
               />
               <button
                 type="submit"
                 disabled={newName.trim().length === 0}
-                className="cursor-pointer rounded-lg bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-[0.15em] text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="cursor-pointer rounded-full bg-white px-6 py-2.5 text-sm font-bold uppercase tracking-[0.15em] text-brand-darker transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
               >
                 Add
               </button>
@@ -354,7 +360,7 @@ function NameEditor() {
           </section>
 
           {/* Bulk paste */}
-          <details open className="group rounded-2xl border border-white/10 bg-brand-darker/40 p-5 backdrop-blur-md sm:p-6">
+          <details open className="group rounded-2xl border border-white/10 bg-background/40 p-5 backdrop-blur-md sm:p-6">
             <summary className="flex cursor-pointer items-center justify-between text-xs font-bold uppercase tracking-[0.15em] text-white/70 marker:content-none">
               <span>Bulk paste</span>
               <span className="text-brand-light transition group-open:rotate-180">▾</span>
@@ -367,7 +373,7 @@ function NameEditor() {
               value={bulk}
               onChange={(e) => setBulk(e.target.value)}
               rows={6}
-              placeholder={"Jane Doe\nJohn Smith\n…"}
+              placeholder={"Joshua Zobule\nMarcio Aumanu\n…"}
               className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-brand-ink/40 px-3 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
             />
             <div className="mt-3 flex flex-wrap gap-2">
@@ -399,7 +405,7 @@ function NameEditor() {
           </div>
 
           {/* Save */}
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-brand-darker/70 px-5 py-3.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-brand-cyan/10 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-background/70 px-5 py-3.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-brand-cyan/10 backdrop-blur-md">
             <span className="flex items-center gap-2 text-sm font-semibold">
               {saveError ? (
                 <span className="text-red-300">⚠ Save failed, try again</span>
