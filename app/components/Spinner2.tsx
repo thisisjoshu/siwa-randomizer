@@ -132,6 +132,12 @@ export default function Spinner2Page() {
     if (!next) return;
     lastWinnerRef.current = next;
 
+    // Begin buffering the confetti now — it loads "metadata" only on page load,
+    // so kicking off the full fetch at spin-start keeps it off the critical path
+    // while leaving ample time to be ready by the reveal.
+    const cv = confettiVideoRef.current;
+    if (cv && cv.preload !== "auto") cv.preload = "auto";
+
     setWinner(null);
     setShowConfetti(false);
     setLandingIndex(null);
@@ -297,9 +303,9 @@ export default function Spinner2Page() {
           </p>
           <Link
             href="/admin"
-            className="mt-8 rounded-full bg-white px-10 py-4 text-base font-bold uppercase tracking-[0.2em] text-brand-dark shadow-[0_15px_45px_-12px_rgba(0,0,0,0.45)] transition hover:scale-105 sm:px-12 sm:py-5 sm:text-lg"
+            className="mt-6 rounded-full bg-white px-8 py-2.5 text-sm font-bold uppercase tracking-[0.2em] text-brand-dark shadow-[0_15px_45px_-12px_rgba(0,0,0,0.45)] transition hover:scale-105 sm:px-10 sm:py-3 sm:text-base"
           >
-            Add names →
+            Add names
           </Link>
         </div>
       ) : (
@@ -461,7 +467,7 @@ export default function Spinner2Page() {
         src={`${ASSET}/confetti.mp4`}
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         onEnded={() => setShowConfetti(false)}
         className="pointer-events-none fixed inset-0 z-30 h-full w-full object-cover transition-opacity duration-200"
         style={{ mixBlendMode: "screen", opacity: showConfetti ? 1 : 0 }}

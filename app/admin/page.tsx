@@ -157,18 +157,18 @@ function PasswordGate({ onAuthed }: { onAuthed: () => void }) {
   };
 
   return (
-    <div className="mx-auto flex min-h-[78vh] max-w-md flex-col items-center justify-center">
+    <div className="mx-auto flex min-h-[80svh] w-full max-w-sm flex-col items-center justify-center">
       {/* Frosted card with a gold ring nodding to the spinner-1 frame. */}
-      <div className="w-full rounded-3xl border border-white/10 bg-background/40 px-8 py-10 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] ring-1 ring-amber-200/25 backdrop-blur-md sm:px-10 sm:py-12">
+      <div className="w-full rounded-3xl border border-white/10 bg-background/40 px-6 py-8 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] ring-1 ring-amber-200/25 backdrop-blur-md sm:px-10 sm:py-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={LOGO} alt="Solomon Water" className="mx-auto h-auto w-40 sm:w-48" />
+        <img src={LOGO} alt="Solomon Water" className="mx-auto h-auto w-32 sm:w-48" />
         <h1
           style={{ WebkitTextStroke: "0.016em currentColor", paintOrder: "stroke fill" }}
-          className="font-names mt-5 text-5xl uppercase tracking-wide text-white/90 sm:text-6xl"
+          className="font-names mt-4 text-4xl uppercase tracking-wide text-white/90 sm:mt-5 sm:text-6xl"
         >
           Admin
         </h1>
-        <form onSubmit={submit} className="mt-8 w-full">
+        <form onSubmit={submit} className="mt-6 w-full sm:mt-8">
           <input
             autoFocus
             type="password"
@@ -178,7 +178,7 @@ function PasswordGate({ onAuthed }: { onAuthed: () => void }) {
               setError(false);
             }}
             placeholder="Password"
-            className="w-full rounded-xl border border-white/15 bg-brand-ink/40 px-4 py-3 text-center text-lg tracking-widest text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30"
+            className="w-full rounded-xl border border-white/15 bg-brand-ink/40 px-4 py-3 text-center text-base tracking-widest text-white placeholder-white/30 outline-none transition focus:border-brand-cyan focus:ring-2 focus:ring-brand-cyan/30 sm:text-lg"
           />
           {error && (
             <p className="mt-3 text-sm font-semibold text-red-300">
@@ -187,7 +187,7 @@ function PasswordGate({ onAuthed }: { onAuthed: () => void }) {
           )}
           <button
             type="submit"
-            className="mt-5 w-full cursor-pointer rounded-full bg-white px-8 py-3 text-base font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/40 transition hover:scale-[1.02]"
+            className="mt-5 w-full cursor-pointer rounded-full bg-white px-8 py-2.5 text-sm font-bold uppercase tracking-[0.2em] text-brand-darker shadow-[0_15px_45px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/40 transition hover:scale-[1.02] sm:py-3 sm:text-base"
           >
             Unlock
           </button>
