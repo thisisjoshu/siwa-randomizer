@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { pickRandomName } from "../lib/names";
+import { pickRandomName, shuffle } from "../lib/names";
 import { useNames } from "../lib/store";
 
 // Row height drives both the visual size and the spin math. The card is sized
@@ -42,12 +42,24 @@ export default function Spinner2Page({
   initialNames?: string[];
 }) {
   const { names, loaded } = useNames(initialNames);
+  // Reel order, randomized once after mount so names don't scroll past — or rest
+  // beside the winner — in entered/alphabetical order. Seeded with the entered
+  // order so the server render and first client render match (no hydration
+  // mismatch); the shuffle then runs in the effect below. The admin list and
+  // the draw odds are unaffected — see shuffle() in lib/names.
+  const [reelNames, setReelNames] = useState<string[]>(names);
+  useEffect(() => {
+    setReelNames(shuffle(names));
+  }, [names]);
   const [winner, setWinner] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [showConfetti, setShowConfetti] = useState(false);
   // Row index in the reel that the slow-down lands on; we paint the winner there
   // so the travel distance can stay constant (independent of the list).
   const [landingIndex, setLandingIndex] = useState<number | null>(null);
+  // Winner captured when the landing row is chosen, so the reel can be re-phased
+  // around it during render without reading a ref mid-render.
+  const [landingWinner, setLandingWinner] = useState<string | null>(null);
   const [cardScale, setCardScale] = useState(1);
   const [cardReady, setCardReady] = useState(false);
   const confettiVideoRef = useRef<HTMLVideoElement>(null);
@@ -65,17 +77,17 @@ export default function Spinner2Page({
   // plus runway — keeps the DOM small (re-rendering thousands of rows is what
   // made the stop stutter).
   const reel = useMemo(() => {
-    if (names.length === 0) return [];
-    const reelH = names.length * ITEM_HEIGHT;
+    if (reelNames.length === 0) return [];
+    const reelH = reelNames.length * ITEM_HEIGHT;
     const maxTravel =
       (SPIN_SPEED_PX_PER_MS * SLOWDOWN_DURATION_MS) / (SLOWDOWN_POWER + 1);
     const cycles = Math.ceil(maxTravel / reelH) + 8;
     const out: string[] = [];
-    for (let i = 0; i < cycles; i++) out.push(...names);
+    for (let i = 0; i < cycles; i++) out.push(...reelNames);
     return out;
-  }, [names]);
+  }, [reelNames]);
 
-  const reelHeight = names.length * ITEM_HEIGHT;
+  const reelHeight = reelNames.length * ITEM_HEIGHT;
 
   // Card height = three rows of window, scaled back up by the frame inset.
   const cardHeight = (ITEM_HEIGHT * 3) / WINDOW_VISIBLE_FRACTION;
@@ -160,8 +172,8 @@ export default function Spinner2Page({
   }, []);
 
   const startSpinning = useCallback(() => {
-    if (names.length === 0) return;
-    const next = pickRandomName(names, lastWinnerRef.current ?? undefined);
+    if (reelNames.length === 0) return;
+    const next = pickRandomName(reelNames, lastWinnerRef.current ?? undefined);
     if (!next) return;
     lastWinnerRef.current = next;
 
@@ -174,6 +186,7 @@ export default function Spinner2Page({
     setWinner(null);
     setShowConfetti(false);
     setLandingIndex(null);
+    setLandingWinner(null);
     updateTranslate(0);
     spinStartRef.current = performance.now();
     phaseRef.current = "spinning";
@@ -189,7 +202,7 @@ export default function Spinner2Page({
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [names, reelHeight, updateTranslate]);
+  }, [reelNames, reelHeight, updateTranslate]);
 
   const stopSpinning = useCallback(() => {
     const elapsed = performance.now() - spinStartRef.current;
@@ -222,6 +235,7 @@ export default function Spinner2Page({
     // Paint the winner on the row that ends up centred (target is a whole number
     // of rows up, so −target/ITEM_HEIGHT is an integer index).
     setLandingIndex(Math.round(-target / ITEM_HEIGHT));
+    setLandingWinner(winnerName);
 
     phaseRef.current = "stopping";
     setPhase("stopping");
@@ -300,6 +314,24 @@ export default function Spinner2Page({
 
   const isEmpty = loaded && names.length === 0;
   const isReady = loaded && names.length > 0;
+
+  // While locking onto the winner, re-phase the whole reel so the landing row
+  // shows the winner *and* the rows around it are the winner's real neighbours
+  // in the list. Painting only the centre row left its neighbours as the raw
+  // repeated sequence, which could coincide with the winner — a visible
+  // duplicate side-by-side, especially likely on short lists (~2/n per spin).
+  const winnerIndex =
+    landingIndex !== null && landingWinner !== null
+      ? reelNames.indexOf(landingWinner)
+      : -1;
+  const nameForRow = (name: string, i: number) =>
+    landingIndex !== null && winnerIndex >= 0
+      ? reelNames[
+          (((i - landingIndex + winnerIndex) % reelNames.length) +
+            reelNames.length) %
+            reelNames.length
+        ]
+      : name;
 
   return (
     <div
@@ -411,7 +443,7 @@ export default function Spinner2Page({
                   >
                     {/* Paint the winner on the landing row so the stop always
                         settles on it, whatever the travel distance was. */}
-                    {i === landingIndex ? lastWinnerRef.current ?? name : name}
+                    {nameForRow(name, i)}
                   </div>
                 ))}
               </div>

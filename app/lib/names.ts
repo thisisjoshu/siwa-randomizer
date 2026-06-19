@@ -20,6 +20,19 @@ export function cleanNames(names: string[]): string[] {
   return out;
 }
 
+// Return a shuffled copy (Fisher–Yates). The spinner randomizes its reel order
+// for presentation so the names don't scroll past (or rest beside the winner)
+// in entered/alphabetical order. This is purely cosmetic — the winner is still
+// chosen uniformly by pickRandomName, so it doesn't change anyone's odds.
+export function shuffle<T>(items: T[]): T[] {
+  const out = items.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 // Pick a random name from `names`. When possible, avoid repeating `exclude`
 // (the immediately-previous winner) so we never draw the same person twice
 // back-to-back — every spin is otherwise independent over the full list.
